@@ -53,7 +53,7 @@ python tools/update_index.py validate
 
 ---
 
-## DIY-014 详解
+## JSON Index Tools 详解
 
 ### 原则
 

@@ -19,7 +19,7 @@ console.log > 单元测试
 
 ---
 
-## DIY-014: JSON Index Tools
+## JSON Index Tools
 
 **用 CLI 工具操作 JSON，禁止直接编辑。**
 
@@ -51,5 +51,5 @@ JSON 文件代替数据库
 复制粘贴代替抽象
 console.log 代替测试
 能用就行，安全除外
-工具操作 JSON，不要直接编辑
+用工具操作索引，不要直接编辑 JSON
 ```
