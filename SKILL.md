@@ -23,8 +23,14 @@ This knowledge base serves two purposes:
 
 ```
 zettel/
-├── README.md              # Index and entry point
+├── README.md              # Human-readable index and overview
 ├── SKILL.md               # This file (maintenance guide)
+├── AGENTS.md              # DIY development specifications
+├── index.json             # Machine-readable index (CRITICAL)
+│
+├── tools/                 # 🔧 Search and maintenance tools
+│   ├── search.py          # Search and query tool
+│   └── update_index.py    # Index management tool (CRITICAL)
 │
 ├── conversations/         # Complete chat records (input + output)
 │   ├── README.md
@@ -37,6 +43,76 @@ zettel/
 │   └── {a}-x-{b}.md
 │
 └── notes/                 # Loose notes (scratchpad)
+```
+
+---
+
+## Index System (NEW - Simplified Maintenance)
+
+### Core Principle: Index-First
+
+**`index.json` is the SINGLE SOURCE OF TRUTH for all machine queries.**
+
+This reduces tool calls from 3+ (update conversation file + update README + update SKILL) to 1 (update index.json).
+
+### Index Structure
+
+```json
+{
+  "metadata": { "version", "last_updated", "counts" },
+  "conversations": [{ "file", "topic", "date", "concepts" }],
+  "concepts": [{ "name", "category", "file" }],
+  "connections": [{ "file", "concepts" }]
+}
+```
+
+### Tools
+
+**Search Tool** - Query the knowledge base:
+```bash
+# Find a concept
+python tools/search.py concept observer-check
+
+# Search conversations
+python tools/search.py conversation 2026-03-07
+
+# Find related concepts
+python tools/search.py related mock-driven-validation
+
+# Full-text search
+python tools/search.py grep "DIY"
+
+# List all items
+python tools/search.py list concepts
+
+# Show statistics
+python tools/search.py stats
+```
+
+**Index Manager** - Update index.json (⚠️ NEVER edit index.json directly):
+```bash
+# Add new conversation
+python tools/update_index.py add-conversation \
+    "2026-03-09-topic.md" \
+    "对话主题" \
+    "2026-03-09" \
+    "concept-1" "concept-2"
+
+# Add new concept
+python tools/update_index.py add-concept \
+    "concept-name" \
+    "解决方法论"
+
+# Add connection
+python tools/update_index.py add-connection \
+    "connections/a-x-b.md" \
+    "concept-a" "concept-b"
+
+# Validate index
+python tools/update_index.py validate
+
+# Update statistics
+python tools/update_index.py update-stats
 ```
 
 ---
@@ -143,19 +219,33 @@ Preserve the reasoning, examples, struggles.
 - Led to creation of [[other-concept]]
 ```
 
-### 4. After Recording Conversation
+### 4. After Recording Conversation (SIMPLIFIED)
 
-**Step 1**: Create/update concept cards in `concepts/`
-- Extract structured insights
-- Link back to source conversation
-- Preserve "why it matters" and "context"
+**CRITICAL: Update `index.json` ONLY** (single write, replaces multiple updates)
 
-**Step 2**: Update `conversations/README.md`
-- Add new conversation to index
+```json
+// Add to conversations array:
+{
+  "file": "2026-MM-DD-topic.md",
+  "topic": "Brief description",
+  "date": "2026-MM-DD",
+  "concepts": ["concept-1", "concept-2"]
+}
 
-**Step 3**: Update main `README.md`
-- Add new concepts to index
-- Update "insights by source" section
+// Add to concepts array for each new concept:
+{
+  "name": "concept-name",
+  "category": "认知偏差与陷阱|解决方法论|工具与基础设施",
+  "file": "concepts/concept-name.md"
+}
+
+// Update metadata counts
+```
+
+**Optional (Batch Update)**: Update `README.md` and `conversations/README.md` 
+- Can be deferred to batch updates (e.g., end of session)
+- Not required for every new concept
+- Use `node tools/search.js` for immediate lookups
 
 ---
 
@@ -204,7 +294,7 @@ Technical explanation.
 
 ---
 
-## Maintenance Tasks
+## Maintenance Tasks (Optimized for Minimal Tool Calls)
 
 ### Task 1: Record New Conversation
 
@@ -228,7 +318,7 @@ When user shares a case, insight, or engages in discussion:
    - What ideas emerged
    - Link to existing concepts
 
-### Task 2: Create/Update Concept Cards
+### Task 2: Create Concept Card (REQUIRED)
 
 From conversation, create `concepts/{name}.md`:
 
@@ -238,19 +328,73 @@ From conversation, create `concepts/{name}.md`:
 4. **Core mechanism** (technical explanation)
 5. **Related concepts and sources**
 
-### Task 3: Maintain Indexes
+### Task 3: Update Index (REQUIRED - Use Tool, Never Edit Directly)
+
+**⚠️ CRITICAL: Always use `update_index.py` tool. Never manually edit `index.json`.**
+
+**Why use a tool?**
+- Prevents JSON syntax errors
+- Maintains consistency between metadata and actual data
+- Validates references (concepts exist, files present)
+- Single atomic operation
+
+**Usage:**
+```bash
+# Add the conversation you just created
+python tools/update_index.py add-conversation \
+    "2026-03-09-topic.md" \
+    "对话主题描述" \
+    "2026-03-09" \
+    "concept-1" "concept-2"
+
+# Add each new concept
+python tools/update_index.py add-concept \
+    "concept-name" \
+    "解决方法论"
+
+# If you created connection files
+python tools/update_index.py add-connection \
+    "connections/concept-a-x-concept-b.md" \
+    "concept-a" "concept-b"
+
+# Validate everything is consistent
+python tools/update_index.py validate
+```
+
+**This replaces the old multi-file update process.** One tool call instead of 3+ file edits.
+
+### Task 4: Maintain Human-Readable Indexes (OPTIONAL - Batch)
+
+**Can be deferred** to end of session or periodic batch updates:
 
 - `conversations/README.md`: List all conversations
 - `README.md`: Concept index with source links
 - Update "insights by source" tracking
 
-### Task 4: Consistency Check
+Use the search tool for immediate lookups instead:
+```bash
+python tools/search.py list concepts
+python tools/search.py conversation 2026-03-08
+```
+
+### Task 5: Consistency Check
+
+Use the validation tool:
+```bash
+python tools/update_index.py validate
+```
 
 Periodically verify:
+- `index.json` is in sync with actual files
 - All concepts link to source conversations
 - All conversation files have complete input/output
 - No 2024 dates (should be 2026)
 - Links are not broken
+
+If counts are wrong, update them:
+```bash
+python tools/update_index.py update-stats
+```
 
 ---
 
@@ -263,6 +407,8 @@ Periodically verify:
 | **Always link concept to conversation** | Traceability |
 | **Always preserve original quotes** | Authentic voice |
 | **Year is always 2026** | Consistency |
+| **⚠️ Use `update_index.py` tool - never edit index.json directly** | Prevents errors, maintains consistency |
+| **README updates are OPTIONAL** | Batch them to reduce tool calls |
 
 ---
 
@@ -325,4 +471,5 @@ When updating, check:
 - [ ] Conversation has complete AI output (not excerpted)
 - [ ] Concept cards link to source conversations
 - [ ] All dates are 2026
-- [ ] README indexes are updated
+- [ ] **Used `update_index.py` tool to update index.json (NEVER edit directly)**
+- [ ] README indexes are updated (optional, can batch)

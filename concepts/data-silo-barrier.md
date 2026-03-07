@@ -62,6 +62,7 @@ From conversation: [gradual-consultation-origin](../conversations/2026-03-07-gra
 ---
 
 ## Related Concepts
+- [[agent-only-engineering]] - Agent 无法判断数据可达性，必须交互确认
 - [[gradual-consultation]] - 依赖用户输入的模式
 - [[user-provided-context]] - 用户主动输入的局限
 - [[activation-friction]] - 数据获取与用户体验的张力
