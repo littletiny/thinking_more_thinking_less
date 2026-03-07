@@ -1,11 +1,42 @@
 ---
 name: zettel-maintainer
-description: Maintain the Zettel knowledge base structure, conversations, and concepts. Use when user wants to record discussions, add new concepts, link ideas, or ensure consistency. Triggers on "record this conversation", "add to zettel", "new concept", or when user shares insights that should be preserved.
+description: Maintain the Zettel knowledge base structure, conversations, and concepts. Use when user explicitly says "record this", "add to zettel", "new concept", OR when the conversation clearly concludes with significant insights.
 ---
 
 # Zettel Maintainer
 
 Maintain the Zettel knowledge base: structured conversations, extracted concepts, and their relationships.
+
+---
+
+## ⚠️ When to Record (CRITICAL - Reduce Tool Calls)
+
+**DO NOT record every conversation. Recording is expensive (multiple tool calls).**
+
+### Record ONLY when:
+1. **User explicitly requests**: "record this", "add to zettel", "save this discussion"
+2. **Conversation is clearly complete** AND produced significant insights worth preserving
+3. **New concept emerged** that is reusable and non-obvious
+
+### Skip recording when:
+- Routine Q&A without new insights
+- Debugging or troubleshooting sessions
+- Small talk or clarifications
+- The insight is obvious or already documented
+- User is still exploring (conversation not concluded)
+
+### Decision flow:
+```
+Conversation ended?
+    ↓ No → Don't record (wait for conclusion)
+    ↓ Yes
+Significant new insight?
+    ↓ No → Don't record (not worth the cost)
+    ↓ Yes
+User explicitly asked to record OR insight is highly reusable?
+    ↓ No → Optional (use judgment)
+    ↓ Yes → Record it
+```
 
 ---
 
@@ -294,107 +325,89 @@ Technical explanation.
 
 ---
 
-## Maintenance Tasks (Optimized for Minimal Tool Calls)
+## Recording Workflow (Minimal Tool Calls)
 
-### Task 1: Record New Conversation
+When you decide to record (see "When to Record" above):
 
-When user shares a case, insight, or engages in discussion:
+### Step 1: Create Conversation File
+```
+conversations/2026-MM-DD-{brief-topic}.md
+```
 
-1. **Create conversation file**
-   ```
-   conversations/2026-MM-DD-{brief-topic}.md
-   ```
+Content template:
+```markdown
+# Conversation: {Topic}
 
-2. **Copy complete input/output**
-   - User input: FULL text, no editing
-   - AI output: FULL response, not summary
-   - Preserve formatting, typos, everything
+## Metadata
+- **Date**: 2026-MM-DD
+- **Topic**: One-line description
+- **Concepts Produced**: [[concept-1]], [[concept-2]]
 
-3. **Extract key quotes**
-   - User's most insightful statements
-   - Key AI reasoning steps
+---
 
-4. **Document concepts produced**
-   - What ideas emerged
-   - Link to existing concepts
+## Conversation Record
 
-### Task 2: Create Concept Card (REQUIRED)
+### User Input
+```
+[Paste complete user message]
+```
 
-From conversation, create `concepts/{name}.md`:
+### AI Output
+```
+[Paste complete AI response]
+```
 
-1. **One-sentence definition**
-2. **Why it matters** (from conversation context)
-3. **Source context** (link to conversation, quote originals)
-4. **Core mechanism** (technical explanation)
-5. **Related concepts and sources**
+---
 
-### Task 3: Update Index (REQUIRED - Use Tool, Never Edit Directly)
+## Key Quotes
 
-**⚠️ CRITICAL: Always use `update_index.py` tool. Never manually edit `index.json`.**
+> "Original user quote"
 
-**Why use a tool?**
-- Prevents JSON syntax errors
-- Maintains consistency between metadata and actual data
-- Validates references (concepts exist, files present)
-- Single atomic operation
+> "Key AI insight"
+```
 
-**Usage:**
+### Step 2: Create Concept Cards (If new concepts emerged)
+
+Create `concepts/{name}.md` only for **reusable, non-obvious insights**:
+
+```markdown
+# Concept Name
+
+## One Sentence
+Definition.
+
+## Why It Matters
+(Why this concept is important)
+
+## Source Context
+From conversation: [filename](../conversations/2026-MM-DD-topic.md)
+
+> "Original user quote"
+
+## Core Mechanism
+Technical explanation.
+
+## Related Concepts
+- [[other-concept]]
+```
+
+### Step 3: Update Index
+
+**⚠️ Use the tool - never edit index.json directly:**
+
 ```bash
-# Add the conversation you just created
+# Add conversation
 python tools/update_index.py add-conversation \
-    "2026-03-09-topic.md" \
-    "对话主题描述" \
-    "2026-03-09" \
-    "concept-1" "concept-2"
+    "2026-MM-DD-topic.md" "Topic" "2026-MM-DD" "concept-1"
 
-# Add each new concept
-python tools/update_index.py add-concept \
-    "concept-name" \
-    "解决方法论"
+# Add concept (if new)
+python tools/update_index.py add-concept "concept-name" "解决方法论"
 
-# If you created connection files
-python tools/update_index.py add-connection \
-    "connections/concept-a-x-concept-b.md" \
-    "concept-a" "concept-b"
-
-# Validate everything is consistent
+# Validate
 python tools/update_index.py validate
 ```
 
-**This replaces the old multi-file update process.** One tool call instead of 3+ file edits.
-
-### Task 4: Maintain Human-Readable Indexes (OPTIONAL - Batch)
-
-**Can be deferred** to end of session or periodic batch updates:
-
-- `conversations/README.md`: List all conversations
-- `README.md`: Concept index with source links
-- Update "insights by source" tracking
-
-Use the search tool for immediate lookups instead:
-```bash
-python tools/search.py list concepts
-python tools/search.py conversation 2026-03-08
-```
-
-### Task 5: Consistency Check
-
-Use the validation tool:
-```bash
-python tools/update_index.py validate
-```
-
-Periodically verify:
-- `index.json` is in sync with actual files
-- All concepts link to source conversations
-- All conversation files have complete input/output
-- No 2024 dates (should be 2026)
-- Links are not broken
-
-If counts are wrong, update them:
-```bash
-python tools/update_index.py update-stats
-```
+**Goal**: Complete recording in 2-3 tool calls maximum.
 
 ---
 
