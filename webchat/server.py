@@ -94,6 +94,7 @@ class SessionMeta:
     message_count: int = 0
     last_accessed_at: str = ""
     acp_session_id: str = ""  # kimi-cli session id for session recovery
+    cwd: str = "."  # working directory for kimi session
     
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -343,7 +344,7 @@ class WebSession(BaseSession):
         self._conn, self._process = await self._conn_context.__aenter__()
         
         logger.debug(f"[{self.id}] Initializing ACP connection...")
-        logger.info(f"[{self.id}] YOLO_MODE: {YOLO_MODE} (auto-approve all permission requests)")
+        logger.warning(f"[{self.id}] YOLO_MODE: {YOLO_MODE} (auto-approve all permission requests)")
         init_result = await self._conn.initialize(
             protocol_version=acp.PROTOCOL_VERSION,
             client_capabilities=ClientCapabilities(
@@ -362,9 +363,11 @@ class WebSession(BaseSession):
         # 判断是创建新session还是加载已有session
         existing_acp_session_id = self._meta.acp_session_id
         
+        acp_session_id_changed = False
+        
         if existing_acp_session_id and can_load_session:
             # 尝试加载已有session
-            logger.info(f"[{self.id}] Loading existing ACP session: {existing_acp_session_id}")
+            logger.warning(f"[{self.id}] Loading existing ACP session: {existing_acp_session_id}")
             try:
                 await self._conn.load_session(
                     cwd=self._cwd, 
@@ -372,37 +375,39 @@ class WebSession(BaseSession):
                     session_id=existing_acp_session_id
                 )
                 self._session_id = existing_acp_session_id
-                logger.info(f"[{self.id}] Successfully loaded ACP session: {self._session_id}")
+                logger.warning(f"[{self.id}] Successfully loaded ACP session: {self._session_id}")
             except Exception as e:
                 logger.warning(f"[{self.id}] Failed to load session {existing_acp_session_id}: {e}")
-                logger.info(f"[{self.id}] Falling back to creating new session...")
+                logger.warning(f"[{self.id}] Falling back to creating new session...")
                 session = await self._conn.new_session(cwd=self._cwd, mcp_servers=[])
                 self._session_id = session.session_id
-                # 更新metadata中的acp_session_id
+                # 标记acp_session_id发生了变化
+                acp_session_id_changed = True
                 self._meta.acp_session_id = self._session_id
         else:
             # 创建新session
             if existing_acp_session_id and not can_load_session:
-                logger.warning(f"[{self.id}] ACP server doesn't support load_session, creating new")
+                logger.warning(f"[{self.id}] ACP server doesn't support load_session (capabilities: {init_result.agent_capabilities}), creating new")
             logger.debug(f"[{self.id}] Creating new ACP session...")
             session = await self._conn.new_session(cwd=self._cwd, mcp_servers=[])
             self._session_id = session.session_id
-            # 保存acp_session_id到metadata
-            self._meta.acp_session_id = self._session_id
-            logger.info(f"[{self.id}] Created new ACP session: {self._session_id}")
+            # 标记acp_session_id发生了变化（从空到新ID，或从旧ID到新ID）
+            if self._session_id != self._meta.acp_session_id:
+                acp_session_id_changed = True
+                self._meta.acp_session_id = self._session_id
+            logger.warning(f"[{self.id}] Created new ACP session: {self._session_id}")
         
         self._initialized = True
         
-        # 同步 acp_session_id 到 metadata（如果发生了变化）
-        if self._session_id and self._session_id != self._meta.acp_session_id:
-            self._meta.acp_session_id = self._session_id
-            if self._on_acp_session_id_changed:
-                try:
-                    self._on_acp_session_id_changed(self._session_id)
-                except Exception as e:
-                    logger.warning(f"[{self.id}] Failed to sync acp_session_id: {e}")
+        # 触发回调同步到metadata（如果acp_session_id发生了变化）
+        if acp_session_id_changed and self._on_acp_session_id_changed:
+            try:
+                self._on_acp_session_id_changed(self._session_id)
+                logger.debug(f"[{self.id}] Triggered acp_session_id sync: {self._session_id}")
+            except Exception as e:
+                logger.warning(f"[{self.id}] Failed to sync acp_session_id: {e}")
         
-        logger.info(f"[{self.id}] Initialization complete, ACP session: {self._session_id}")
+        logger.warning(f"[{self.id}] Initialization complete, ACP session: {self._session_id}, changed: {acp_session_id_changed}")
     
     async def _cleanup_acp(self):
         """清理 ACP 资源"""
@@ -1115,7 +1120,8 @@ class SessionManager:
             created_at=now,
             updated_at=now,
             status="active",
-            message_count=0
+            message_count=0,
+            cwd=cwd  # 保存cwd到metadata
         )
         
         self._metadata[session_id] = meta
@@ -1149,7 +1155,9 @@ class SessionManager:
                 def on_acp_session_id_changed(acp_session_id: str):
                     self.sync_acp_session_id(session_id, acp_session_id)
                 
-                session = WebSession(meta, on_acp_session_id_changed=on_acp_session_id_changed)
+                # 使用保存的cwd恢复session
+                session_cwd = meta.cwd if meta.cwd else "."
+                session = WebSession(meta, cwd=session_cwd, on_acp_session_id_changed=on_acp_session_id_changed)
                 self._sessions[session_id] = session
                 return session
         
