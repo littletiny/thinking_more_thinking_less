@@ -194,7 +194,7 @@ async function renameSession(sessionId, newTitle) {
     if (!newTitle.trim()) return;
     
     try {
-        await apiPost(`/api/sessions/${sessionId}/rename`, { title: newTitle.trim() });
+        await apiPut(`/api/sessions/${sessionId}/title`, { title: newTitle.trim() });
         
         const session = sessions.find(s => s.id === sessionId);
         if (session) {
