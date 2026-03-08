@@ -1,5 +1,5 @@
 ---
-name: zettel-maintainer
+name: zettel
 description: Maintain the Zettel knowledge base structure, conversations, and concepts. Use when user explicitly says "record this", "add to zettel", "new concept", OR when the conversation clearly concludes with significant insights.
 ---
 
