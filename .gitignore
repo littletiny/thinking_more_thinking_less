@@ -1,0 +1,17 @@
+# Mock mode data directory
+webchat/mock_data/
+
+# Session metadata (auto-generated)
+webchat/sessions.json
+
+# Runtime logs
+webchat/server.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
