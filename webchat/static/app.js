@@ -1095,8 +1095,8 @@ async function sendMessage() {
     if (!message) return;
     
     if (!currentSession) {
-        await createSession();
-        if (!currentSession) return;
+        showToast('Please select or create a session first', 'warning');
+        return;
     }
     
     // 如果 session 不是 active，自动激活它
@@ -1527,8 +1527,8 @@ async function init() {
     if (activeSession) {
         selectSession(activeSession.id);
     } else if (sessions.length === 0) {
-        // Create initial session if none exists
-        await createSession();
+        // No sessions, show empty state
+        renderMessages([]);
     }
     
     elements.messageInput.focus();
