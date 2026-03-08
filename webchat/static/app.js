@@ -31,6 +31,7 @@ const CODE_THEMES = [
 ];
 
 let currentTheme = localStorage.getItem('code-theme') || 'default';
+let hideToolsCalls = localStorage.getItem('hide-tools-calls') === 'true';
 
 // DOM Elements
 const elements = {
@@ -56,6 +57,7 @@ const elements = {
     themeList: document.getElementById('themeList'),
     themeCancel: document.getElementById('themeCancel'),
     themeToggleBtn: document.getElementById('themeToggleBtn'),
+    toggleToolsBtn: document.getElementById('toggleToolsBtn'),
 };
 
 // ============== API Functions ==============
@@ -921,6 +923,9 @@ function renderThinkingBlock(thinking, isStreaming = false) {
 
 function renderToolsBlock(toolCalls) {
     // 渲染工具调用块 - 简洁风格: ToolName (args) status
+    if (hideToolsCalls) {
+        return '';
+    }
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
         return '';
     }
@@ -1393,6 +1398,38 @@ elements.messageInput.addEventListener('keydown', (e) => {
     }
 });
 
+// ============== Tools Toggle Functions ==============
+
+function initToolsToggle() {
+    updateToolsToggleButton();
+    elements.toggleToolsBtn.addEventListener('click', toggleToolsVisibility);
+}
+
+function toggleToolsVisibility() {
+    hideToolsCalls = !hideToolsCalls;
+    localStorage.setItem('hide-tools-calls', hideToolsCalls);
+    updateToolsToggleButton();
+    
+    // 重新加载当前对话以应用更改
+    if (currentSession) {
+        loadConversation(currentSession);
+    }
+    
+    showToast(hideToolsCalls ? '工具调用已隐藏' : '工具调用已显示');
+}
+
+function updateToolsToggleButton() {
+    if (hideToolsCalls) {
+        elements.toggleToolsBtn.textContent = '🛠️';
+        elements.toggleToolsBtn.classList.add('hidden');
+        elements.toggleToolsBtn.title = '显示工具调用';
+    } else {
+        elements.toggleToolsBtn.textContent = '🛠️';
+        elements.toggleToolsBtn.classList.remove('hidden');
+        elements.toggleToolsBtn.title = '隐藏工具调用';
+    }
+}
+
 // ============== Theme Functions ==============
 
 function initTheme() {
@@ -1479,8 +1516,9 @@ async function init() {
         btn.textContent = 'Hide Archived & Closed';
     }
     
-    // Initialize theme
+    // Initialize theme and tools toggle
     initTheme();
+    initToolsToggle();
     
     await loadSessions();
     

@@ -1061,6 +1061,27 @@
             opacity: 1;
         }
         
+        /* Toggle Tools Button */
+        .toggle-tools-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            opacity: 0.6;
+        }
+        
+        .toggle-tools-btn:hover {
+            opacity: 1;
+            background: var(--bg-secondary);
+        }
+        
+        .toggle-tools-btn.hidden {
+            opacity: 0.3;
+        }
+        
         /* Theme Toggle Button */
         .theme-toggle-btn {
             position: fixed;
@@ -1257,7 +1278,7 @@
             <header class="chat-header">
                 <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
                 <span class="title" id="chatTitle">Zettel WebChat</span>
-                <div></div>
+                <button class="toggle-tools-btn" id="toggleToolsBtn" title="显示/隐藏工具调用">🛠️</button>
             </header>
             
             <div class="messages" id="messages">
