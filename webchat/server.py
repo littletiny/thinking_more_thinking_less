@@ -52,7 +52,7 @@ except ImportError:
 # ============== Logging ==============
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -62,6 +62,7 @@ logger = logging.getLogger('webchat')
 # ============== Configuration ==============
 
 MOCK_MODE = os.environ.get("MOCK_MODE", "false").lower() == "true" or not ACP_AVAILABLE
+YOLO_MODE = os.environ.get("YOLO_MODE", "true").lower() == "true"  # 默认启用 yolo 模式，自动批准所有权限请求
 
 if MOCK_MODE:
     DATA_DIR = Path(__file__).parent / "mock_data"
@@ -338,10 +339,12 @@ class WebSession(BaseSession):
         self._conn, self._process = await self._conn_context.__aenter__()
         
         logger.debug(f"[{self.id}] Initializing ACP connection...")
+        logger.info(f"[{self.id}] YOLO_MODE: {YOLO_MODE} (auto-approve all permission requests)")
         await self._conn.initialize(
             protocol_version=acp.PROTOCOL_VERSION,
             client_capabilities=ClientCapabilities(
                 fs=FileSystemCapability(read_text_file=True, write_text_file=True),
+                terminal=True,  # 启用终端能力
             ),
             client_info=Implementation(name="zettel-webchat", version="1.0"),
         )
@@ -920,8 +923,19 @@ class SimpleACPClient:
             return acp.WriteTextFileResponse(success=False, error=str(e))
     
     async def request_permission(self, options, session_id: str, tool_call, **kwargs):
+        """处理权限请求 - YOLO 模式下自动批准所有请求"""
         from acp.schema import AllowedOutcome
-        outcome = AllowedOutcome(option_id='approve', outcome='selected')
+        
+        if YOLO_MODE:
+            # YOLO 模式：自动批准，无需用户确认
+            logger.info(f"[ACP] YOLO: Auto-approved permission request for {tool_call}")
+            outcome = AllowedOutcome(option_id='approve', outcome='selected')
+        else:
+            # 非 YOLO 模式：可以在这里实现弹窗确认逻辑
+            # 目前也默认批准，但记录了请求
+            logger.warning(f"[ACP] Permission request (YOLO disabled): {tool_call}")
+            outcome = AllowedOutcome(option_id='approve', outcome='selected')
+        
         return acp.RequestPermissionResponse(outcome=outcome)
     
     def clear(self):
@@ -1295,8 +1309,28 @@ def parse_conversation_messages(content: str) -> list:
     current_time = None
     in_header = False  # 标记是否在消息头部（### 后的空行）
     
+    def is_valid_message_header(line: str) -> tuple:
+        """
+        检查是否为有效的消息头部行
+        有效格式: ### User [timestamp] 或 ### Assistant [timestamp]
+        返回: (is_valid, role, time) 元组
+        """
+        if not line.startswith('### '):
+            return (False, None, None)
+        
+        match = line[4:].strip()
+        # 必须包含时间戳格式 [timestamp]
+        if ' [' in match and match.endswith(']'):
+            role_part, time_part = match.rsplit(' [', 1)
+            role_lower = role_part.lower()
+            if role_lower in ['user', 'assistant']:
+                return (True, role_lower, time_part[:-1])
+        return (False, None, None)
+    
     for line in lines:
-        if line.startswith('### '):
+        is_header, role, timestamp = is_valid_message_header(line)
+        
+        if is_header:
             # 保存上一个消息
             if current_role and current_content:
                 messages.append({
@@ -1305,15 +1339,9 @@ def parse_conversation_messages(content: str) -> list:
                     'time': current_time
                 })
             
-            # 解析新消息的头部
-            match = line[4:].strip()
-            if ' [' in match and match.endswith(']'):
-                role_part, time_part = match.rsplit(' [', 1)
-                current_role = role_part.lower() if role_part.lower() in ['user', 'assistant'] else None
-                current_time = time_part[:-1]
-            else:
-                current_role = match.lower() if match.lower() in ['user', 'assistant'] else None
-                current_time = None
+            # 开始新消息
+            current_role = role
+            current_time = timestamp
             current_content = []
             in_header = True  # 跳过头部后的空行
         
