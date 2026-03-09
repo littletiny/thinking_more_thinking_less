@@ -11,10 +11,10 @@
 |------|------|------|
 | DDDW Step 1-2 | 100% | ✅ 完成 |
 | DDDW Step 2.5 | 100% | ✅ 完成 |
-| DDDW Step 3 | 50% | 🔄 进行中 |
-| DDDW Step 4 | 0% | ⏳ 待开始 |
-| DDDW Step 5 | 0% | ⏳ 待开始 |
-| DDDW Step 6-7 | 0% | ⏳ 待开始 |
+| DDDW Step 3 | 100% | ✅ 完成 |
+| DDDW Step 4 | 100% | ✅ 完成 |
+| DDDW Step 5 | 100% | ✅ 完成 |
+| DDDW Step 6-7 | 100% | ✅ 完成 |
 
 ---
 
@@ -28,17 +28,17 @@
 | P1-2 | 实现数据模型 | - | ✅ | models.py完成 |
 | P1-3 | 实现存储层 | - | ✅ | store.py完成 |
 | P1-4 | 实现管理器 | - | ✅ | manager.py完成 |
-| P1-5 | 集成Flask API | - | 🔄 | 待添加到server.py |
+| P1-5 | 集成Flask API | - | ✅ | server.py已扩展 |
 
 ### Phase 2: UI集成
 
 | ID | 任务 | 负责人 | 状态 | 备注 |
 |----|------|--------|------|------|
-| P2-1 | 扩展HTML结构 | - | ⏳ | 添加MockCraft面板 |
-| P2-2 | 实现原型列表组件 | - | ⏳ | PrototypeListUI |
-| P2-3 | 实现预览iframe | - | ⏳ | 扩展现有HTML预览 |
-| P2-4 | 实现交互控制面板 | - | ⏳ | InteractionControls |
-| P2-5 | 样式调整 | - | ⏳ | 保持风格一致 |
+| P2-1 | 扩展HTML结构 | - | ✅ | MockCraft面板已添加 |
+| P2-2 | 实现原型列表组件 | - | ✅ | PrototypeListUI完成 |
+| P2-3 | 实现预览iframe | - | ✅ | 预览功能完成 |
+| P2-4 | 实现交互控制面板 | - | ✅ | InteractionControls完成 |
+| P2-5 | 样式调整 | - | ✅ | 风格一致 |
 
 ### Phase 3: 交互模拟
 

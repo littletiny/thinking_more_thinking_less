@@ -33,17 +33,36 @@
    - 创建任务状态板
    - 创建会话日志
 
-### 下一步
-- Step 4: 并行开发
-  - 后端API集成
-  - 前端UI实现
-  - 交互模拟功能
+5. **Step 4**: 并行开发
+   - 后端API集成 (server.py扩展)
+   - 前端UI实现 (HTML/CSS/JS)
+   - MockCraft核心模块
+
+6. **Step 5**: 回归测试
+   - API端点测试
+   - Bug修复 (store.py字段处理)
+   - 功能验证通过
+
+7. **Step 6-7**: 文档同步和提交
+   - 更新任务状态板
+   - 所有代码已提交
+
+### 下一步 (未来迭代)
+- 增强LLM集成，支持从Chat直接生成原型
+- 添加更多交互类型支持
+- 原型版本对比功能
+- 导出PRD功能
 
 ### 提交记录
 ```
 fdd918d docs: add MockCraft technical constraints document (DDDW Step 1.5)
 76804e9 docs: add MockCraft design document (DDDW Step 2)
 d1bbbc2 feat: add MockCraft core modules (models, store, manager) - DDDW Step 2.5
+1f8a471 docs: initialize Knowledge Base structure (DDDW Step 3)
+0059192 feat: add MockCraft API endpoints to Flask server (DDDW Step 4.1)
+95c705b feat: add MockCraft panel UI to HTML (DDDW Step 4.2)
+d91f26e feat: add MockCraft frontend logic and integration (DDDW Step 4.2)
+cdec768 fix: handle missing fields in prototype store get method
 ```
 
 ---
