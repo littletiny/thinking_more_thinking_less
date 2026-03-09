@@ -1712,7 +1712,7 @@ function startPlayback() {
             return;
         }
         
-        goToPage(nextIndex);
+        goToPage(nextIndex, true); // 使用轻量级更新，避免闪烁
     }, interval * 1000);
     
     showToast('开始播放');
@@ -1733,33 +1733,77 @@ function stopPlayback() {
 
 /**
  * 导航到指定页面（切换原型）
+ * @param {number} index - 目标页面索引
+ * @param {boolean} skipRender - 是否跳过重新渲染（用于轻量级导航）
  */
-function goToPage(index) {
+function goToPage(index, skipRender = false) {
     if (index < 0 || index >= MockCraftState.pages.length) return;
     
     const page = MockCraftState.pages[index];
     if (!page) return;
     
-    console.log('[goToPage] navigating to page:', index, 'proto:', page.name);
+    console.log('[goToPage] navigating to page:', index, 'proto:', page.name, 'skipRender:', skipRender);
     
     MockCraftState.currentPageIndex = index;
     
     // 如果切换到不同的原型，加载该原型
     if (MockCraftState.currentPrototype?.id !== page.id) {
         selectPrototype(page.id);
-    } else {
+    } else if (!skipRender) {
         // 同一个原型，只更新显示
         renderPageOrchestration();
+    } else {
+        // 轻量级更新：只更新 UI 状态，不重建 DOM
+        updatePageOrchestrationUI();
     }
 }
 
 /**
- * 相对导航
+ * 轻量级更新页面编排 UI（不重建 DOM）
+ */
+function updatePageOrchestrationUI() {
+    const currentIndex = MockCraftState.currentPageIndex;
+    const pages = MockCraftState.pages;
+    const isPlaying = MockCraftState.isPlaying;
+    
+    // 更新页面指示器
+    const indicator = document.querySelector('.page-indicator');
+    if (indicator) {
+        indicator.textContent = `${currentIndex + 1} / ${pages.length}`;
+    }
+    
+    // 更新页面列表激活状态
+    const pageItems = document.querySelectorAll('.page-item');
+    pageItems.forEach((item, idx) => {
+        const isActive = idx === currentIndex;
+        const isPlayingThis = isPlaying && isActive;
+        
+        item.classList.toggle('active', isActive);
+        item.classList.toggle('playing', isPlayingThis);
+        
+        // 更新状态指示器
+        const statusSpan = item.querySelector('.page-status');
+        if (isActive && !statusSpan) {
+            const span = document.createElement('span');
+            span.className = 'page-status';
+            span.textContent = '●';
+            item.appendChild(span);
+        } else if (!isActive && statusSpan) {
+            statusSpan.remove();
+        }
+    });
+    
+    // 更新预览
+    updatePreviewForCurrentPage();
+}
+
+/**
+ * 相对导航（使用轻量级更新，避免闪烁）
  */
 function navigatePage(delta) {
     const newIndex = MockCraftState.currentPageIndex + delta;
     if (newIndex >= 0 && newIndex < MockCraftState.pages.length) {
-        goToPage(newIndex);
+        goToPage(newIndex, true); // 使用轻量级更新
     }
 }
 
