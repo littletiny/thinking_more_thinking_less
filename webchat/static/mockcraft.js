@@ -1492,27 +1492,11 @@ function renderPageOrchestration() {
     
     console.log('[renderPageOrchestration] currentProto:', currentProto?.name);
     
-    // 功能按钮（重命名、删除当前原型）
-    let actionButtonsHtml = '';
-    console.log('[renderPageOrchestration] currentProto for buttons:', currentProto?.id, currentProto?.name);
-    if (currentProto) {
-        actionButtonsHtml = `
-            <div class="proto-actions">
-                <button class="proto-action-btn" onclick="MockCraft.showRenameDialog()">✏️ 重命名当前</button>
-                <button class="proto-action-btn danger" onclick="MockCraft.showDeleteDialog()">🗑️ 删除当前</button>
-            </div>
-        `;
-        console.log('[renderPageOrchestration] actionButtonsHtml generated');
-    } else {
-        console.log('[renderPageOrchestration] no currentProto, skipping action buttons');
-    }
-    
     // 如果没有页面（原型），显示提示
     if (!pages || pages.length === 0) {
         console.log('[renderPageOrchestration] no pages');
         container.innerHTML = `
             <div class="page-orchestration">
-                ${actionButtonsHtml}
                 <p style="color: var(--text-secondary); font-size: 13px; padding: 12px;">没有可播放的页面（原型）</p>
             </div>
         `;
@@ -1561,9 +1545,6 @@ function renderPageOrchestration() {
     
     html += `
             </div>
-            
-            <!-- 功能按钮 -->
-            ${actionButtonsHtml}
         </div>
     `;
     
