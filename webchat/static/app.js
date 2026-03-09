@@ -569,7 +569,7 @@ function onConfirmCancel() {
 
 function updateChatTitle() {
     elements.chatTitle.textContent = currentSession 
-        ? escapeHtml(currentSession.title) 
+        ? currentSession.title 
         : 'Zettel WebChat';
 }
 
