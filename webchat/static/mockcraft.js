@@ -453,8 +453,6 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     const menu = document.createElement('div');
     menu.className = 'prototype-menu';
     menu.id = 'prototypeMenu';
-    menu.style.left = `${rect.left}px`;
-    menu.style.top = `${rect.bottom + 4}px`;
     
     // 菜单只保留删除功能
     menu.innerHTML = `
@@ -462,6 +460,29 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     `;
     
     document.body.appendChild(menu);
+    
+    // 计算菜单位置，确保不超出屏幕
+    const menuWidth = 120; // 菜单最小宽度
+    const menuHeight = 50; // 估计菜单高度
+    
+    let left = rect.right - menuWidth;
+    let top = rect.bottom + 4;
+    
+    // 确保不超出右边界
+    if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 10;
+    }
+    // 确保不超出左边界
+    if (left < 10) {
+        left = 10;
+    }
+    // 确保不超出底部边界
+    if (top + menuHeight > window.innerHeight) {
+        top = rect.top - menuHeight - 4;
+    }
+    
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
     currentPrototypeMenu = menu;
     currentMenuProtoId = protoId;
     prototypeMenuVisible = true;
