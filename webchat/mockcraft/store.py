@@ -81,14 +81,17 @@ class PrototypeStore:
             for i in proto_info.get('interactions', [])
         ]
         
+        from datetime import datetime
+        
+        now = datetime.now().isoformat()
         return Prototype(
             id=proto_id,
-            name=proto_info['name'],
+            name=proto_info.get('name', 'Untitled'),
             html_content=html_content,
-            session_id=proto_info['session_id'],
-            created_at=proto_info['created_at'],
-            updated_at=proto_info['updated_at'],
-            version=proto_info['version'],
+            session_id=proto_info.get('session_id', ''),
+            created_at=proto_info.get('created_at', now),
+            updated_at=proto_info.get('updated_at', now),
+            version=proto_info.get('version', 1),
             interactions=interactions,
             state_schema=proto_info.get('state_schema', {}),
             current_state=proto_info.get('current_state', {})
