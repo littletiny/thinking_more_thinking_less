@@ -22,7 +22,7 @@ let attachedImages = [];       // 粘贴的图片数组 {id, dataUrl, mimeType}
 
 // Split panel state
 let splitMode = null;          // null | 'vertical' | 'horizontal'
-let panelSizes = { panel1: 50, panel2: 50 };  // 百分比
+let panelSizes = { panel1: 35, panel2: 65 };  // 百分比 (chat 35% / mockcraft 65%)
 
 // Theme definitions
 const CODE_THEMES = [

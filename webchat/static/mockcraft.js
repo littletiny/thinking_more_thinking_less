@@ -488,9 +488,9 @@ function openMockCraftPanel() {
     mainContainer.classList.add('split-vertical');
     console.log('[openMockCraftPanel] Added split-vertical class, mainContainer display:', mainContainer.style.display);
     
-    // 显示面板
+    // 显示面板 (65% 宽度，让 preview 区域更大)
     mockcraftPanel.style.display = 'flex';
-    mockcraftPanel.style.flex = '0 0 50%';
+    mockcraftPanel.style.flex = '0 0 65%';
     mockcraftPanel.style.minWidth = '0';
     mockcraftPanel.style.minHeight = '0';
     mockcraftPanel.style.overflow = 'hidden';
@@ -502,9 +502,9 @@ function openMockCraftPanel() {
         console.log('[openMockCraftPanel] Set panelDivider display to block');
     }
     
-    // 设置大小 (50/50)
+    // 设置大小 (35% chat / 65% mockcraft)
     if (chatPanel) {
-        chatPanel.style.flex = '0 0 50%';
+        chatPanel.style.flex = '0 0 35%';
         chatPanel.style.minWidth = '0';
         chatPanel.style.minHeight = '0';
         chatPanel.style.overflow = 'hidden';
