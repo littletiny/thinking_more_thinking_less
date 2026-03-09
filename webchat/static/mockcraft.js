@@ -777,14 +777,9 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     menu.className = 'prototype-menu';
     menu.id = 'prototypeMenu';
     
-    // 检查是否已在编排中
-    const isInOrchestration = MockCraftState.pages.some(p => p.id === protoId);
-    
     // 菜单：加入编排、重命名、删除
     menu.innerHTML = `
-        <button class="prototype-menu-item ${isInOrchestration ? 'disabled' : ''}" data-action="add-to-orchestration" ${isInOrchestration ? 'disabled' : ''}>
-            ${isInOrchestration ? '✓ 已在编排' : '➕ 加入编排'}
-        </button>
+        <button class="prototype-menu-item" data-action="add-to-orchestration">➕ 加入编排</button>
         <div class="prototype-menu-separator"></div>
         <button class="prototype-menu-item" data-action="rename">✏️ 重命名</button>
         <button class="prototype-menu-item danger" data-action="delete">🗑️ 删除</button>
@@ -857,21 +852,19 @@ function handlePrototypeMenuAction(action, protoId) {
 }
 
 /**
- * 将原型加入页面编排
+ * 将原型加入页面编排（支持同一原型多次加入）
  */
 function addToOrchestration(protoId) {
     const proto = MockCraftState.prototypes.find(p => p.id === protoId);
     if (!proto) return;
     
-    // 检查是否已存在
-    if (MockCraftState.pages.some(p => p.id === protoId)) {
-        showToast('该原型已在编排中');
-        return;
-    }
+    // 生成唯一实例ID
+    const instanceId = `${proto.id}_inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // 添加到页面列表
+    // 添加到页面列表（允许重复）
     MockCraftState.pages.push({
-        id: proto.id,
+        id: instanceId,
+        protoId: proto.id,
         name: proto.name,
         type: 'prototype',
         protoIndex: MockCraftState.prototypes.findIndex(p => p.id === protoId)
@@ -1509,8 +1502,8 @@ function renderPageOrchestration() {
         return;
     }
     
-    // 检查当前选中的原型是否在编排中
-    const currentProtoInPages = currentProto && pages.some(p => p.id === currentProto.id);
+    // 检查当前选中的原型是否在编排中（使用 protoId 比较）
+    const currentProtoInPages = currentProto && pages.some(p => p.protoId === currentProto.id);
     
     let html = `
         <div class="page-orchestration">
@@ -1682,9 +1675,9 @@ function removeFromOrchestration(pageIndex) {
     // 如果移除后还有页面，切换到新的当前页面
     if (MockCraftState.pages.length > 0) {
         const newPage = MockCraftState.pages[MockCraftState.currentPageIndex];
-        if (newPage && MockCraftState.currentPrototype?.id !== newPage.id) {
-            // 切换到不同的原型
-            selectPrototype(newPage.id);
+        if (newPage && MockCraftState.currentPrototype?.id !== newPage.protoId) {
+            // 切换到不同的原型（使用 protoId 比较）
+            selectPrototype(newPage.protoId);
         } else {
             renderPageOrchestration();
         }
@@ -1904,9 +1897,9 @@ function goToPage(index, skipRender = false) {
     
     MockCraftState.currentPageIndex = index;
     
-    // 如果切换到不同的原型，加载该原型
-    if (MockCraftState.currentPrototype?.id !== page.id) {
-        selectPrototype(page.id);
+    // 如果切换到不同的原型，加载该原型（使用 protoId）
+    if (MockCraftState.currentPrototype?.id !== page.protoId) {
+        selectPrototype(page.protoId);
     } else if (!skipRender) {
         // 同一个原型，只更新显示
         renderPageOrchestration();
@@ -2009,8 +2002,8 @@ function initPagesForPrototype(prototype) {
         MockCraftState.playInterval = null;
     }
     
-    // 如果选中的原型在编排中，更新当前索引
-    const pageIndex = MockCraftState.pages.findIndex(p => p.id === prototype?.id);
+    // 如果选中的原型在编排中，更新当前索引（使用 protoId 比较）
+    const pageIndex = MockCraftState.pages.findIndex(p => p.protoId === prototype?.id);
     if (pageIndex !== -1) {
         MockCraftState.currentPageIndex = pageIndex;
     }
@@ -2026,15 +2019,13 @@ function addCurrentToOrchestration() {
         return;
     }
     
-    // 检查是否已存在
-    if (MockCraftState.pages.some(p => p.id === proto.id)) {
-        showToast('该原型已在编排中');
-        return;
-    }
+    // 生成唯一实例ID
+    const instanceId = `${proto.id}_inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // 添加到页面列表
+    // 添加到页面列表（允许重复）
     MockCraftState.pages.push({
-        id: proto.id,
+        id: instanceId,
+        protoId: proto.id,
         name: proto.name,
         type: 'prototype',
         protoIndex: MockCraftState.prototypes.findIndex(p => p.id === proto.id)
