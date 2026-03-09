@@ -1464,6 +1464,9 @@ function renderPageOrchestration() {
     const container = document.getElementById('interactionControls');
     const section = document.getElementById('interactionSection');
     
+    // 更新 header 播放控件
+    updateHeaderPlaybackControls();
+    
     console.log('[renderPageOrchestration] container:', !!container, 'section:', !!section, 'pages:', MockCraftState.pages?.length);
     
     if (!container || !section) {
@@ -1471,19 +1474,12 @@ function renderPageOrchestration() {
         return;
     }
     
-    // 保存当前输入值（如果存在）
-    const intervalInput = document.getElementById('playIntervalInput');
-    const savedInterval = intervalInput?.value || '2';
-    
-    // 每次都显示区域
-    section.style.display = 'block';
-    
     const isPlaying = MockCraftState.isPlaying;
     const currentIndex = MockCraftState.currentPageIndex;
     const pages = MockCraftState.pages;
-    const currentProto = MockCraftState.currentPrototype;
     
-    console.log('[renderPageOrchestration] currentProto:', currentProto?.name);
+    // 每次都显示区域
+    section.style.display = 'block';
     
     // 如果没有页面（原型），显示提示
     if (!pages || pages.length === 0) {
@@ -1496,29 +1492,9 @@ function renderPageOrchestration() {
         return;
     }
     
-    // 检查当前选中的原型是否在编排中（使用 protoId 比较）
-    const currentProtoInPages = currentProto && pages.some(p => p.protoId === currentProto.id);
-    
+    // 只渲染页面列表（播放控制移到 header）
     let html = `
         <div class="page-orchestration">
-            
-            <!-- 播放控制栏 -->
-            <div class="playback-controls">
-                <button class="playback-btn ${isPlaying ? 'active' : ''}" id="playPauseBtn" title="${isPlaying ? '暂停' : '播放'}">
-                    ${isPlaying ? '⏸️' : '▶️'}
-                </button>
-                <button class="playback-btn" id="prevPageBtn" title="上一页">⏮️</button>
-                <button class="playback-btn" id="nextPageBtn" title="下一页">⏭️</button>
-                <span class="page-indicator">${currentIndex + 1} / ${pages.length}</span>
-                <div class="playback-options">
-                    <label class="playback-option">
-                        <input type="number" id="playIntervalInput" min="1" max="60" value="2" title="间隔秒数">
-                        <span>s</span>
-                    </label>
-                </div>
-            </div>
-            
-            <!-- 页面列表 -->
             <div class="page-list" id="pageList">
     `;
     
@@ -1553,10 +1529,6 @@ function renderPageOrchestration() {
     `;
     
     container.innerHTML = html;
-    
-    // 恢复保存的值
-    const newIntervalInput = document.getElementById('playIntervalInput');
-    if (newIntervalInput) newIntervalInput.value = savedInterval;
     
     // 绑定事件
     console.log('[renderPageOrchestration] About to bind events...');
@@ -1704,25 +1676,21 @@ function getPageTypeIcon(type) {
 function bindPageOrchestrationEvents() {
     console.log('[bindPageOrchestrationEvents] Binding events...');
     
-    // 播放/暂停
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    console.log('[bindPageOrchestrationEvents] playPauseBtn:', !!playPauseBtn);
-    playPauseBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] playPauseBtn clicked');
+    // Header 播放控制按钮
+    const headerPlayPauseBtn = document.getElementById('headerPlayPauseBtn');
+    const headerPrevBtn = document.getElementById('headerPrevBtn');
+    const headerNextBtn = document.getElementById('headerNextBtn');
+    
+    headerPlayPauseBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] header playPauseBtn clicked');
         togglePlayback();
     });
-    
-    // 上一页/下一页
-    const prevPageBtn = document.getElementById('prevPageBtn');
-    const nextPageBtn = document.getElementById('nextPageBtn');
-    console.log('[bindPageOrchestrationEvents] prevPageBtn:', !!prevPageBtn, 'nextPageBtn:', !!nextPageBtn);
-    
-    prevPageBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] prevPageBtn clicked');
+    headerPrevBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] header prevBtn clicked');
         navigatePage(-1);
     });
-    nextPageBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] nextPageBtn clicked');
+    headerNextBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] header nextBtn clicked');
         navigatePage(1);
     });
     
@@ -1904,6 +1872,40 @@ function goToPage(index, skipRender = false) {
 }
 
 /**
+ * 更新 Header 播放控件
+ */
+function updateHeaderPlaybackControls() {
+    const pages = MockCraftState.pages;
+    const headerControls = document.getElementById('headerPlaybackControls');
+    const headerDivider = document.getElementById('headerDivider');
+    const headerIndicator = document.getElementById('headerPageIndicator');
+    const headerPlayPauseBtn = document.getElementById('headerPlayPauseBtn');
+    
+    if (!headerControls) return;
+    
+    if (!pages || pages.length === 0) {
+        headerControls.style.display = 'none';
+        if (headerDivider) headerDivider.style.display = 'none';
+        return;
+    }
+    
+    headerControls.style.display = 'flex';
+    if (headerDivider) headerDivider.style.display = 'block';
+    
+    const currentIndex = MockCraftState.currentPageIndex;
+    const isPlaying = MockCraftState.isPlaying;
+    
+    if (headerIndicator) {
+        headerIndicator.textContent = `${currentIndex + 1} / ${pages.length}`;
+    }
+    
+    if (headerPlayPauseBtn) {
+        headerPlayPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
+        headerPlayPauseBtn.title = isPlaying ? '暂停' : '播放';
+    }
+}
+
+/**
  * 轻量级更新页面编排 UI（不重建 DOM）
  */
 function updatePageOrchestrationUI() {
@@ -1911,11 +1913,8 @@ function updatePageOrchestrationUI() {
     const pages = MockCraftState.pages;
     const isPlaying = MockCraftState.isPlaying;
     
-    // 更新页面指示器
-    const indicator = document.querySelector('.page-indicator');
-    if (indicator) {
-        indicator.textContent = `${currentIndex + 1} / ${pages.length}`;
-    }
+    // 更新 header 播放控件
+    updateHeaderPlaybackControls();
     
     // 更新页面列表激活状态
     const pageItems = document.querySelectorAll('.page-item');

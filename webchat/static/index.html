@@ -1010,6 +1010,36 @@
             border-color: var(--text-secondary);
         }
         
+        .header-playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        
+        .header-playback-controls .panel-btn {
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+        
+        .header-page-indicator {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: 4px;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .panel-actions-divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+        
         .panel-content {
             flex: 1;
             overflow: auto;
@@ -2476,6 +2506,15 @@
                 <header class="panel-header">
                     <span class="title">🛠️ MockCraft</span>
                     <div class="panel-actions">
+                        <!-- Playback Controls (shown when pages exist) -->
+                        <div class="header-playback-controls" id="headerPlaybackControls" style="display: none;">
+                            <button class="panel-btn" id="headerPlayPauseBtn" title="播放/暂停">▶️</button>
+                            <button class="panel-btn" id="headerPrevBtn" title="上一页">⏮️</button>
+                            <button class="panel-btn" id="headerNextBtn" title="下一页">⏭️</button>
+                            <span class="header-page-indicator" id="headerPageIndicator">0 / 0</span>
+                        </div>
+                        <div class="panel-actions-divider" id="headerDivider" style="display: none;"></div>
+                        <!-- Action Buttons -->
                         <button class="mockcraft-header-btn" id="generatePrototypeBtn" title="生成原型">
                             <span>✨</span>
                             <span>生成原型</span>
