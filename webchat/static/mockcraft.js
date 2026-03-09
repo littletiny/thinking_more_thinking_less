@@ -1990,20 +1990,30 @@ function updatePreviewForCurrentPage() {
  * 初始化页面编排 - 把所有原型作为页面
  */
 function initPagesForPrototype(prototype) {
-    console.log('[initPagesForPrototype] prototype:', prototype?.name, 'total prototypes:', MockCraftState.prototypes.length);
+    console.log('[initPagesForPrototype] prototype:', prototype?.name, 'total prototypes:', MockCraftState.prototypes.length, 'existing pages:', MockCraftState.pages.length);
     
-    // 将所有原型转换为页面列表
-    const pages = MockCraftState.prototypes.map((proto, index) => ({
-        id: proto.id,
-        name: proto.name,
-        type: 'prototype',
-        protoIndex: index
-    }));
+    // 如果编排列表为空，初始化所有原型
+    // 否则保留用户手动调整的编排状态
+    if (MockCraftState.pages.length === 0) {
+        const pages = MockCraftState.prototypes.map((proto, index) => ({
+            id: proto.id,
+            name: proto.name,
+            type: 'prototype',
+            protoIndex: index
+        }));
+        MockCraftState.pages = pages;
+        console.log('[initPagesForPrototype] initialized pages from prototypes:', pages.length);
+    } else {
+        console.log('[initPagesForPrototype] keeping existing pages');
+    }
     
-    console.log('[initPagesForPrototype] created pages from prototypes:', pages.length);
+    // 更新当前页面索引为选中的原型
+    MockCraftState.currentPageIndex = MockCraftState.pages.findIndex(p => p.id === prototype?.id);
+    if (MockCraftState.currentPageIndex === -1) {
+        // 如果选中的原型不在编排中，默认显示第一个
+        MockCraftState.currentPageIndex = 0;
+    }
     
-    MockCraftState.pages = pages;
-    MockCraftState.currentPageIndex = pages.findIndex(p => p.id === prototype?.id) || 0;
     MockCraftState.isPlaying = false;
     if (MockCraftState.playInterval) {
         clearInterval(MockCraftState.playInterval);
