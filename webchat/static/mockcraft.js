@@ -1902,6 +1902,16 @@ function updateHeaderPlaybackControls() {
     if (headerPlayPauseBtn) {
         headerPlayPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
         headerPlayPauseBtn.title = isPlaying ? '暂停' : '播放';
+        // 播放时高亮按钮
+        if (isPlaying) {
+            headerPlayPauseBtn.style.background = 'var(--primary)';
+            headerPlayPauseBtn.style.color = 'white';
+            headerPlayPauseBtn.style.borderColor = 'var(--primary)';
+        } else {
+            headerPlayPauseBtn.style.background = '';
+            headerPlayPauseBtn.style.color = '';
+            headerPlayPauseBtn.style.borderColor = '';
+        }
     }
 }
 
@@ -1988,12 +1998,7 @@ function initPagesForPrototype(prototype) {
     console.log('[initPagesForPrototype] prototype:', prototype?.name, 'existing pages:', MockCraftState.pages.length);
     
     // 完全手动管理编排，不自动初始化
-    // 只停止播放状态
-    MockCraftState.isPlaying = false;
-    if (MockCraftState.playInterval) {
-        clearInterval(MockCraftState.playInterval);
-        MockCraftState.playInterval = null;
-    }
+    // 保持播放状态，不要在这里停止
     
     // 如果选中的原型在编排中，更新当前索引（使用 protoId 比较）
     const pageIndex = MockCraftState.pages.findIndex(p => p.protoId === prototype?.id);

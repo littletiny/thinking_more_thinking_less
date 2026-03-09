@@ -1646,12 +1646,14 @@
         }
         
         .page-item.playing {
-            animation: playingPulse 2s infinite;
+            animation: playingPulse 1s infinite;
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 8px rgba(16, 163, 127, 0.4);
         }
         
         @keyframes playingPulse {
-            0%, 100% { background: rgba(16, 163, 127, 0.1); }
-            50% { background: rgba(16, 163, 127, 0.2); }
+            0%, 100% { background: rgba(16, 163, 127, 0.2); }
+            50% { background: rgba(16, 163, 127, 0.5); }
         }
         
         .page-item.dragging {
