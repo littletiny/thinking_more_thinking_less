@@ -989,6 +989,27 @@
             color: var(--text-primary);
         }
         
+        .mockcraft-header-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .mockcraft-header-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+        
         .panel-content {
             flex: 1;
             overflow: auto;
@@ -2407,8 +2428,14 @@
                 <header class="panel-header">
                     <span class="title">🛠️ MockCraft</span>
                     <div class="panel-actions">
-                        <button class="panel-btn" id="generatePrototypeBtn" title="生成原型">✨</button>
-                        <button class="panel-btn" id="importHtmlBtn" title="导入HTML">📥</button>
+                        <button class="mockcraft-header-btn" id="generatePrototypeBtn" title="生成原型">
+                            <span>✨</span>
+                            <span>生成原型</span>
+                        </button>
+                        <button class="mockcraft-header-btn" id="importHtmlBtn" title="导入HTML">
+                            <span>📥</span>
+                            <span>导入HTML</span>
+                        </button>
                         <button class="panel-btn" id="refreshMockcraftBtn" title="刷新列表">🔄</button>
                         <button class="panel-btn" id="closeSplitBtn" title="关闭分屏" style="display: none;">✕</button>
                     </div>
