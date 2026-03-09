@@ -1506,12 +1506,9 @@ function renderPageOrchestration() {
                  data-index="${index}" 
                  data-page-id="${page.id}"
                  draggable="true"
-                 title="拖拽排序点击切换页面">
-                <span class="page-drag-handle">☰</span>
+                 title="${escapeHtml(page.name)}">
                 <span class="page-number">${index + 1}</span>
                 <span class="page-name">${escapeHtml(page.name)}</span>
-                <span class="page-type">📄</span>
-                ${isActive ? '<span class="page-status">●</span>' : ''}
                 <button class="page-menu-btn" data-page-index="${index}" title="操作">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="6" r="1"/>
@@ -1934,17 +1931,6 @@ function updatePageOrchestrationUI() {
         
         item.classList.toggle('active', isActive);
         item.classList.toggle('playing', isPlayingThis);
-        
-        // 更新状态指示器
-        const statusSpan = item.querySelector('.page-status');
-        if (isActive && !statusSpan) {
-            const span = document.createElement('span');
-            span.className = 'page-status';
-            span.textContent = '●';
-            item.appendChild(span);
-        } else if (!isActive && statusSpan) {
-            statusSpan.remove();
-        }
     });
     
     // 更新预览
