@@ -1028,6 +1028,12 @@
             background: var(--bg-secondary);
         }
         
+        .prototype-list-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
         .mockcraft-menu-btn {
             background: transparent;
             border: none;
@@ -2025,7 +2031,10 @@
                 <div class="mockcraft-section" id="prototypeListSection">
                     <div class="mockcraft-section-header">
                         <span class="mockcraft-section-title">原型列表</span>
-                        <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
+                        <div class="prototype-list-controls">
+                            <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
+                            <button class="mockcraft-menu-btn" id="prototypeMenuBtn" title="更多操作" style="display: none;">⋮</button>
+                        </div>
                     </div>
                     <div class="prototype-list" id="prototypeList">
                         <div class="prototype-placeholder">
@@ -2039,10 +2048,6 @@
                 <div class="mockcraft-section mockcraft-preview-section">
                     <div class="mockcraft-section-header">
                         <span class="mockcraft-section-title">预览</span>
-                        <div class="preview-controls">
-                            <span class="prototype-version" id="previewVersion"></span>
-                            <button class="mockcraft-menu-btn" id="prototypeMenuBtn" title="更多操作" style="display: none;">⋮</button>
-                        </div>
                     </div>
                     <div class="mockcraft-preview-container" id="mockcraftPreviewContainer">
                         <div class="mockcraft-placeholder" id="mockcraftPlaceholder">

@@ -239,7 +239,6 @@ function renderPrototypeList() {
         <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
              data-id="${proto.id}">
             <span class="name">${escapeHtml(proto.name)}</span>
-            <span class="version">v${proto.version}</span>
         </div>
     `).join('');
     
@@ -261,12 +260,6 @@ async function selectPrototype(protoId) {
         renderPrototypePreview(protoId);
         renderInteractionControls(data.prototype);
         
-        // 更新版本显示
-        const versionEl = document.getElementById('previewVersion');
-        if (versionEl) {
-            versionEl.textContent = `v${data.prototype.version}`;
-        }
-        
         // 显示菜单按钮
         document.getElementById('prototypeMenuBtn').style.display = 'inline-block';
         document.getElementById('interactionSection').style.display = 'block';
@@ -287,7 +280,6 @@ function clearPreview() {
     iframe.srcdoc = '';
     placeholder.style.display = 'flex';
     
-    document.getElementById('previewVersion').textContent = '';
     document.getElementById('prototypeMenuBtn').style.display = 'none';
     document.getElementById('interactionSection').style.display = 'none';
     document.getElementById('interactionControls').innerHTML = '';
@@ -469,10 +461,8 @@ function showPrototypeMenu() {
     
     const proto = MockCraftState.currentPrototype;
     
+    // 菜单只保留删除功能
     menu.innerHTML = `
-        <button class="prototype-menu-item" data-action="rename">重命名</button>
-        <button class="prototype-menu-item" data-action="fork">创建新版本</button>
-        <div class="prototype-menu-separator"></div>
         <button class="prototype-menu-item danger" data-action="delete">删除</button>
     `;
     
@@ -503,77 +493,11 @@ function handlePrototypeMenuAction(action) {
     if (!proto) return;
     
     switch (action) {
-        case 'rename':
-            showPrototypeRenameForm();
-            break;
-        case 'fork':
-            closePrototypeMenu();
-            showForkPrototypeDialog();
-            break;
         case 'delete':
             closePrototypeMenu();
             showDeletePrototypeConfirm();
             break;
     }
-}
-
-function showPrototypeRenameForm() {
-    const menu = document.getElementById('prototypeMenu');
-    if (!menu) return;
-    
-    const proto = MockCraftState.currentPrototype;
-    renamingPrototypeId = proto.id;
-    
-    menu.innerHTML = `
-        <div class="prototype-menu-rename">
-            <input type="text" value="${escapeHtml(proto.name)}" maxlength="50" autofocus>
-            <div class="prototype-menu-rename-btns">
-                <button class="save">保存</button>
-                <button class="cancel">取消</button>
-            </div>
-        </div>
-    `;
-    
-    const input = menu.querySelector('input');
-    input.select();
-    input.focus();
-    
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') confirmPrototypeRename(input.value);
-        if (e.key === 'Escape') closePrototypeMenu();
-    });
-    
-    menu.querySelector('.save').addEventListener('click', () => confirmPrototypeRename(input.value));
-    menu.querySelector('.cancel').addEventListener('click', closePrototypeMenu);
-}
-
-async function confirmPrototypeRename(newName) {
-    if (!newName.trim()) {
-        closePrototypeMenu();
-        return;
-    }
-    
-    const protoId = renamingPrototypeId;
-    closePrototypeMenu();
-    
-    try {
-        await updatePrototype(protoId, { name: newName.trim() });
-        showToast('已重命名');
-    } catch (err) {
-        showToast(`重命名失败: ${err.message}`);
-    }
-}
-
-function showForkPrototypeDialog() {
-    const proto = MockCraftState.currentPrototype;
-    if (!proto) return;
-    
-    const newName = prompt('新版本名称:', `${proto.name} (新版本)`);
-    if (!newName) return;
-    
-    updatePrototype(proto.id, { name: newName }).catch(err => {
-        console.error('Failed to fork prototype:', err);
-    });
 }
 
 function showDeletePrototypeConfirm() {
