@@ -777,11 +777,17 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     menu.className = 'prototype-menu';
     menu.id = 'prototypeMenu';
     
-    // 菜单：重命名和删除
+    // 检查是否已在编排中
+    const isInOrchestration = MockCraftState.pages.some(p => p.id === protoId);
+    
+    // 菜单：加入编排、重命名、删除
     menu.innerHTML = `
-        <button class="prototype-menu-item" data-action="rename">重命名</button>
+        <button class="prototype-menu-item ${isInOrchestration ? 'disabled' : ''}" data-action="add-to-orchestration" ${isInOrchestration ? 'disabled' : ''}>
+            ${isInOrchestration ? '✓ 已在编排' : '➕ 加入编排'}
+        </button>
         <div class="prototype-menu-separator"></div>
-        <button class="prototype-menu-item danger" data-action="delete">删除</button>
+        <button class="prototype-menu-item" data-action="rename">✏️ 重命名</button>
+        <button class="prototype-menu-item danger" data-action="delete">🗑️ 删除</button>
     `;
     
     document.body.appendChild(menu);
@@ -835,6 +841,10 @@ function handlePrototypeMenuAction(action, protoId) {
     if (!proto) return;
     
     switch (action) {
+        case 'add-to-orchestration':
+            closePrototypeMenu();
+            addToOrchestration(protoId);
+            break;
         case 'rename':
             closePrototypeMenu();
             showRenamePrototypeForm(protoId);
@@ -844,6 +854,32 @@ function handlePrototypeMenuAction(action, protoId) {
             showDeletePrototypeConfirmForProto(proto);
             break;
     }
+}
+
+/**
+ * 将原型加入页面编排
+ */
+function addToOrchestration(protoId) {
+    const proto = MockCraftState.prototypes.find(p => p.id === protoId);
+    if (!proto) return;
+    
+    // 检查是否已存在
+    if (MockCraftState.pages.some(p => p.id === protoId)) {
+        showToast('该原型已在编排中');
+        return;
+    }
+    
+    // 添加到页面列表
+    MockCraftState.pages.push({
+        id: proto.id,
+        name: proto.name,
+        type: 'prototype',
+        protoIndex: MockCraftState.prototypes.findIndex(p => p.id === protoId)
+    });
+    
+    // 重新渲染页面编排
+    renderPageOrchestration();
+    showToast('已加入编排');
 }
 
 async function confirmCreatePrototype(name) {
