@@ -1536,6 +1536,7 @@ function renderPageOrchestration() {
     } catch (err) {
         console.error('[renderPageOrchestration] Error binding events:', err);
     }
+}
 
 /**
  * 获取页面类型图标
@@ -1872,4 +1873,3 @@ window.MockCraft = {
     showRenameDialog,
     showDeleteDialog
 };
-}
