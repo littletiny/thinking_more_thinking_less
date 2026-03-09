@@ -19,6 +19,7 @@ const MockCraftState = {
 
 let prototypeMenuVisible = false;  // 菜单显示状态
 let isCreatingPrototype = false;   // 正在新建原型状态
+let renamingPrototypeId = null;    // 正在重命名的原型ID
 
 // ============== Utils ==============
 
@@ -260,6 +261,75 @@ function renderPrototypeList() {
         });
         
         return;
+    }
+    
+    // 如果正在重命名某个原型
+    if (renamingPrototypeId) {
+        const proto = MockCraftState.prototypes.find(p => p.id === renamingPrototypeId);
+        if (proto) {
+            listEl.innerHTML = MockCraftState.prototypes.map(proto => {
+                if (proto.id === renamingPrototypeId) {
+                    return `
+                        <div class="prototype-item-wrapper">
+                            <div class="prototype-item editing">
+                                <input type="text" id="renamePrototypeInput" value="${escapeHtml(proto.name)}" maxlength="50" autofocus>
+                            </div>
+                            <div class="prototype-edit-btns">
+                                <button class="prototype-edit-btn save" id="saveRenameBtn">保存</button>
+                                <button class="prototype-edit-btn cancel" id="cancelRenameBtn">取消</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="prototype-item-wrapper" style="position: relative;">
+                        <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
+                             data-id="${proto.id}">
+                            <span class="name">${escapeHtml(proto.name)}</span>
+                        </div>
+                        <button class="prototype-menu-trigger" data-proto-id="${proto.id}" onclick="event.stopPropagation()">⋮</button>
+                    </div>
+                `;
+            }).join('');
+            
+            // 绑定重命名事件
+            const input = document.getElementById('renamePrototypeInput');
+            const saveBtn = document.getElementById('saveRenameBtn');
+            const cancelBtn = document.getElementById('cancelRenameBtn');
+            
+            if (input) {
+                input.focus();
+                input.select();
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') confirmRenamePrototype(renamingPrototypeId, input.value);
+                    if (e.key === 'Escape') cancelRenamePrototype();
+                });
+            }
+            
+            saveBtn?.addEventListener('click', () => confirmRenamePrototype(renamingPrototypeId, input?.value || ''));
+            cancelBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cancelRenamePrototype();
+            });
+            
+            // 绑定其他项的菜单按钮事件
+            listEl.querySelectorAll('.prototype-menu-trigger').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const protoId = btn.dataset.protoId;
+                    togglePrototypeMenuForItem(protoId, btn);
+                });
+            });
+            
+            // 绑定其他项的点击事件
+            listEl.querySelectorAll('.prototype-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectPrototype(item.dataset.id);
+                });
+            });
+            
+            return;
+        }
     }
     
     if (MockCraftState.prototypes.length === 0) {
@@ -535,7 +605,7 @@ function handlePrototypeMenuAction(action, protoId) {
     switch (action) {
         case 'rename':
             closePrototypeMenu();
-            showRenamePrototypeDialog(proto);
+            showRenamePrototypeForm(protoId);
             break;
         case 'delete':
             closePrototypeMenu();
@@ -579,15 +649,37 @@ function cancelCreatePrototype() {
     renderPrototypeList();
 }
 
-function showRenamePrototypeDialog(proto) {
-    if (!proto) return;
+function showRenamePrototypeForm(protoId) {
+    renamingPrototypeId = protoId;
+    renderPrototypeList();
+}
+
+async function confirmRenamePrototype(protoId, newName) {
+    newName = newName.trim();
+    if (!newName) {
+        cancelRenamePrototype();
+        return;
+    }
     
-    const newName = prompt('重命名原型:', proto.name);
-    if (!newName || newName === proto.name) return;
+    const proto = MockCraftState.prototypes.find(p => p.id === protoId);
+    if (!proto || newName === proto.name) {
+        cancelRenamePrototype();
+        return;
+    }
     
-    updatePrototype(proto.id, { name: newName.trim() })
-        .then(() => showToast('已重命名'))
-        .catch(err => showToast(`重命名失败: ${err.message}`));
+    renamingPrototypeId = null;
+    
+    try {
+        await updatePrototype(protoId, { name: newName });
+        showToast('已重命名');
+    } catch (err) {
+        showToast(`重命名失败: ${err.message}`);
+    }
+}
+
+function cancelRenamePrototype() {
+    renamingPrototypeId = null;
+    renderPrototypeList();
 }
 
 function showDeletePrototypeConfirmForProto(proto) {
