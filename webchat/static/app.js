@@ -58,6 +58,8 @@ const elements = {
     themeCancel: document.getElementById('themeCancel'),
     themeToggleBtn: document.getElementById('themeToggleBtn'),
     toggleToolsBtn: document.getElementById('toggleToolsBtn'),
+    // Export button
+    exportBtn: document.getElementById('exportBtn'),
 };
 
 // ============== API Functions ==============
@@ -661,22 +663,35 @@ function renderMessages(messages = []) {
         return;
     }
     
-    elements.messages.innerHTML = messages.map(msg => {
+    elements.messages.innerHTML = messages.map((msg, index) => {
+        const originalContent = escapeForDataAttr(msg.content);
+        const copyBtnHtml = `
+            <div class="message-actions">
+                <button class="message-action-btn copy-btn" data-content="${originalContent}" title="复制">
+                    Copy
+                </button>
+            </div>
+        `;
+        
         if (msg.role === 'assistant') {
             const blocks = parseContentToBlocks(msg.content);
             
             let html = `<div class="avatar">AI</div>`;
             html += `<div class="content">`;
             html += renderMessageContent(blocks, false);
+            html += copyBtnHtml;
             html += `</div>`;
             
-            return `<div class="message ${msg.role}">${html}</div>`;
+            return `<div class="message ${msg.role}" data-index="${index}">${html}</div>`;
         }
         
         return `
-            <div class="message ${msg.role}">
+            <div class="message ${msg.role}" data-index="${index}">
                 <div class="avatar">${msg.role === 'user' ? 'U' : 'AI'}</div>
-                <div class="content markdown">${renderMarkdown(msg.content)}</div>
+                <div class="content markdown">
+                    ${renderMarkdown(msg.content)}
+                    ${copyBtnHtml}
+                </div>
             </div>
         `;
     }).join('');
@@ -689,6 +704,11 @@ function renderMessages(messages = []) {
         });
     });
     
+    // Add click handlers for copy buttons
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', handleCopyMessage);
+    });
+    
     // Render mermaid diagrams
     renderMermaidDiagrams();
     
@@ -696,6 +716,59 @@ function renderMessages(messages = []) {
     applySyntaxHighlight(elements.messages);
     
     scrollToBottom();
+}
+
+// Copy message content to clipboard
+async function handleCopyMessage(e) {
+    const btn = e.currentTarget;
+    const content = btn.dataset.content;
+    
+    try {
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(content);
+        } else {
+            // Fallback for non-HTTPS or unsupported browsers
+            fallbackCopyTextToClipboard(content);
+        }
+        
+        // Update button to show copied state
+        btn.classList.add('copied');
+        btn.textContent = 'Copied';
+        
+        showToast('已复制到剪贴板');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.textContent = 'Copy';
+        }, 2000);
+    } catch (err) {
+        showToast('复制失败，请手动复制');
+        console.error('Copy failed:', err);
+    }
+}
+
+// Fallback copy method using textarea
+function fallbackCopyTextToClipboard(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-999999px';
+    textarea.style.top = '-999999px';
+    document.body.appendChild(textarea);
+    
+    textarea.focus();
+    textarea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (!successful) {
+            throw new Error('execCommand copy failed');
+        }
+    } finally {
+        document.body.removeChild(textarea);
+    }
 }
 
 function addMessage(role, content, isStreaming = false) {
@@ -726,6 +799,16 @@ function addMessage(role, content, isStreaming = false) {
         } else {
             html += `<div class="message-block markdown">${renderMarkdown(content)}</div>`;
         }
+        
+        // Add copy button for non-streaming messages
+        const copyBtnHtml = `
+            <div class="message-actions">
+                <button class="message-action-btn copy-btn" data-content="${escapeForDataAttr(content)}" title="复制">
+                    Copy
+                </button>
+            </div>
+        `;
+        html += copyBtnHtml;
     }
     
     html += `</div>`;
@@ -740,6 +823,11 @@ function addMessage(role, content, isStreaming = false) {
             const block = header.closest('.thinking-block');
             block.classList.toggle('collapsed');
         });
+    });
+    
+    // Add click handler for copy button
+    messageEl.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', handleCopyMessage);
     });
 }
 
@@ -1049,6 +1137,16 @@ function finalizeStreamingMessage() {
     const container = document.querySelector('.message.assistant:last-child .streaming-blocks');
     if (!container) return;
     
+    // Build the full content for copy functionality
+    let fullContent = '';
+    streamingBlocks.forEach(block => {
+        if (block.type === 'thinking') {
+            fullContent += `<think>\n${block.content}\n</think>\n\n`;
+        } else if (block.type === 'output') {
+            fullContent += block.content;
+        }
+    });
+    
     // Replace streaming blocks with final rendered blocks
     const finalHtml = streamingBlocks.map(block => {
         if (block.type === 'thinking') {
@@ -1061,7 +1159,16 @@ function finalizeStreamingMessage() {
         return `<div class="message-block markdown">${renderMarkdown(block.content)}</div>`;
     }).join('');
     
-    container.innerHTML = finalHtml;
+    // Add copy button
+    const copyBtnHtml = `
+        <div class="message-actions">
+            <button class="message-action-btn copy-btn" data-content="${escapeForDataAttr(fullContent.trim())}" title="复制">
+                Copy
+            </button>
+        </div>
+    `;
+    
+    container.innerHTML = finalHtml + copyBtnHtml;
     container.classList.remove('streaming-blocks');
     
     // Re-attach click handlers for thinking blocks
@@ -1070,6 +1177,11 @@ function finalizeStreamingMessage() {
             const block = header.closest('.thinking-block');
             block.classList.toggle('collapsed');
         });
+    });
+    
+    // Add click handler for copy button
+    container.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', handleCopyMessage);
     });
     
     // Render mermaid diagrams
@@ -1292,6 +1404,19 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Escape text for use in HTML data attribute
+function escapeForDataAttr(text) {
+    // Replace special characters and newlines for safe HTML attribute usage
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '&#10;')
+        .replace(/\r/g, '&#13;');
+}
+
 function showToast(message) {
     elements.toast.textContent = message;
     elements.toast.classList.add('show');
@@ -1350,6 +1475,50 @@ function closeSidebar() {
     elements.sidebarOverlay.classList.remove('open');
 }
 
+// Export current session to markdown file
+async function exportSession() {
+    if (!currentSession) {
+        showToast('请先选择一个会话');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/sessions/${currentSession.id}/export`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        // Get the filename from Content-Disposition header
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = `chat_${currentSession.id}.md`;
+        if (disposition) {
+            const match = disposition.match(/filename="([^"]+)"/);
+            if (match) {
+                filename = match[1];
+            }
+        }
+        
+        // Get the content
+        const blob = await response.blob();
+        
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('导出成功');
+    } catch (err) {
+        showToast(`导出失败: ${err.message}`);
+        console.error('Export failed:', err);
+    }
+}
+
 function autoResizeTextarea() {
     const el = elements.messageInput;
     el.style.height = 'auto';
@@ -1382,6 +1551,9 @@ document.addEventListener('click', (e) => {
 elements.mobileMenuBtn.addEventListener('click', openSidebar);
 
 elements.sidebarOverlay.addEventListener('click', closeSidebar);
+
+// Export button
+elements.exportBtn.addEventListener('click', exportSession);
 
 elements.sendBtn.addEventListener('click', sendMessage);
 
