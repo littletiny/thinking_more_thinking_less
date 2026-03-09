@@ -1551,6 +1551,13 @@ function renderPageOrchestration() {
 let currentPageMenu = null;
 let currentMenuPageIndex = null;
 
+// 点击外部关闭菜单的处理函数
+function handleClickOutsideMenu(e) {
+    if (currentPageMenu && !currentPageMenu.contains(e.target)) {
+        closePageMenu();
+    }
+}
+
 function togglePageMenuForItem(pageIndex, btnElement) {
     if (currentPageMenu && currentMenuPageIndex === pageIndex) {
         closePageMenu();
@@ -1598,6 +1605,11 @@ function togglePageMenuForItem(pageIndex, btnElement) {
             handlePageMenuAction(item.dataset.action, pageIndex);
         });
     });
+    
+    // 延迟添加点击外部关闭监听，避免立即触发
+    setTimeout(() => {
+        document.addEventListener('click', handleClickOutsideMenu, { once: true });
+    }, 0);
 }
 
 function closePageMenu() {
@@ -1606,6 +1618,7 @@ function closePageMenu() {
         currentPageMenu = null;
     }
     currentMenuPageIndex = null;
+    document.removeEventListener('click', handleClickOutsideMenu);
 }
 
 function handlePageMenuAction(action, pageIndex) {
