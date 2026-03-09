@@ -1488,15 +1488,9 @@ function renderPageOrchestration() {
     // 如果没有页面（原型），显示提示
     if (!pages || pages.length === 0) {
         console.log('[renderPageOrchestration] no pages');
-        const addBtnHtml = currentProto ? `
-            <button class="proto-action-btn" onclick="MockCraft.addCurrentToOrchestration()" style="margin-top: 12px;">
-                ➕ 将当前原型加入编排
-            </button>
-        ` : '';
         container.innerHTML = `
             <div class="page-orchestration">
                 <p style="color: var(--text-secondary); font-size: 13px; padding: 12px;">编排列表为空</p>
-                ${addBtnHtml}
             </div>
         `;
         return;
@@ -2012,33 +2006,6 @@ function initPagesForPrototype(prototype) {
 // ============== Export for Global Access ==============
 
 // 将当前原型加入编排
-function addCurrentToOrchestration() {
-    const proto = MockCraftState.currentPrototype;
-    if (!proto) {
-        showToast('请先选择一个原型');
-        return;
-    }
-    
-    // 生成唯一实例ID
-    const instanceId = `${proto.id}_inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // 添加到页面列表（允许重复）
-    MockCraftState.pages.push({
-        id: instanceId,
-        protoId: proto.id,
-        name: proto.name,
-        type: 'prototype',
-        protoIndex: MockCraftState.prototypes.findIndex(p => p.id === proto.id)
-    });
-    
-    // 设置为当前页面
-    MockCraftState.currentPageIndex = MockCraftState.pages.length - 1;
-    
-    // 重新渲染
-    renderPageOrchestration();
-    showToast('已加入编排');
-}
-
 // 显示重命名对话框
 function showRenameDialog() {
     const proto = MockCraftState.currentPrototype;
@@ -2077,7 +2044,6 @@ window.MockCraft = {
     togglePlayback,
     stopPlayback,
     openMockCraftPanel,
-    addCurrentToOrchestration,
     showRenameDialog,
     showDeleteDialog
 };
