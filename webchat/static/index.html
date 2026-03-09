@@ -1752,43 +1752,6 @@
             cursor: pointer;
         }
         
-        .mockcraft-actions {
-            display: flex;
-            gap: 8px;
-            padding: 12px;
-            border-top: 1px solid var(--border);
-        }
-        
-        .mockcraft-action-btn {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .mockcraft-action-btn:hover {
-            background: var(--primary-hover);
-        }
-        
-        .mockcraft-action-btn.secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-        
-        .mockcraft-action-btn.secondary:hover {
-            background: var(--border);
-        }
-        
         .html-preview-frame {
             width: 100%;
             height: 100%;
@@ -2444,6 +2407,8 @@
                 <header class="panel-header">
                     <span class="title">🛠️ MockCraft</span>
                     <div class="panel-actions">
+                        <button class="panel-btn" id="generatePrototypeBtn" title="生成原型">✨</button>
+                        <button class="panel-btn" id="importHtmlBtn" title="导入HTML">📥</button>
                         <button class="panel-btn" id="refreshMockcraftBtn" title="刷新列表">🔄</button>
                         <button class="panel-btn" id="closeSplitBtn" title="关闭分屏" style="display: none;">✕</button>
                     </div>
@@ -2489,15 +2454,7 @@
                     </div>
                 </div>
                 
-                <!-- Quick Actions -->
-                <div class="mockcraft-actions">
-                    <button class="mockcraft-action-btn" id="generatePrototypeBtn">
-                        <span>生成原型</span>
-                    </button>
-                    <button class="mockcraft-action-btn secondary" id="importHtmlBtn">
-                        <span>导入HTML</span>
-                    </button>
-                </div>
+
             </div>
         </div>
     </div>
