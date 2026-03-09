@@ -34,9 +34,12 @@ let currentTheme = localStorage.getItem('code-theme') || 'default';
 let hideToolsCalls = localStorage.getItem('hide-tools-calls') === 'true';
 
 // DOM Elements
+let sidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+
 const elements = {
     sidebar: document.getElementById('sidebar'),
     sidebarOverlay: document.getElementById('sidebarOverlay'),
+    sidebarToggleBtn: document.getElementById('sidebarToggleBtn'),
     sessionList: document.getElementById('sessionList'),
     newChatBtn: document.getElementById('newChatBtn'),
     mobileMenuBtn: document.getElementById('mobileMenuBtn'),
@@ -1475,6 +1478,24 @@ function closeSidebar() {
     elements.sidebarOverlay.classList.remove('open');
 }
 
+function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    localStorage.setItem('sidebar-collapsed', sidebarCollapsed);
+    updateSidebarState();
+}
+
+function updateSidebarState() {
+    if (sidebarCollapsed) {
+        elements.sidebar.classList.add('collapsed');
+        elements.sidebarToggleBtn.innerHTML = '📁';
+        elements.sidebarToggleBtn.title = '展开会话列表';
+    } else {
+        elements.sidebar.classList.remove('collapsed');
+        elements.sidebarToggleBtn.innerHTML = '📂';
+        elements.sidebarToggleBtn.title = '收起会话列表';
+    }
+}
+
 // Export current session to markdown file
 async function exportSession() {
     if (!currentSession) {
@@ -1551,6 +1572,8 @@ document.addEventListener('click', (e) => {
 elements.mobileMenuBtn.addEventListener('click', openSidebar);
 
 elements.sidebarOverlay.addEventListener('click', closeSidebar);
+
+elements.sidebarToggleBtn.addEventListener('click', toggleSidebar);
 
 // Export button
 elements.exportBtn.addEventListener('click', exportSession);
@@ -1687,6 +1710,9 @@ async function init() {
         btn.dataset.showing = 'true';
         btn.textContent = 'Hide Archived & Closed';
     }
+    
+    // Initialize sidebar state
+    updateSidebarState();
     
     // Initialize theme and tools toggle
     initTheme();

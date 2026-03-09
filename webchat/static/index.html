@@ -43,11 +43,15 @@
         /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
             background: var(--bg-sidebar);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
+        }
+        
+        .sidebar.collapsed {
+            display: none;
         }
         
         .sidebar-header {
@@ -324,7 +328,22 @@
             border: none;
             font-size: 20px;
             cursor: pointer;
-            padding: 8px;
+        }
+        
+        .chat-header .sidebar-toggle-btn {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            color: var(--text-primary);
+            margin-right: 8px;
+        }
+        
+        .chat-header .sidebar-toggle-btn:hover {
+            background: var(--bg-secondary);
         }
         
         .messages {
@@ -1287,6 +1306,15 @@
                 transform: translateX(0);
             }
             
+            .sidebar.collapsed {
+                width: var(--sidebar-width);
+                margin-left: 0;
+            }
+            
+            .chat-header .sidebar-toggle-btn {
+                display: none;
+            }
+            
             .chat-header .mobile-menu-btn {
                 display: block;
             }
@@ -1332,7 +1360,10 @@
         <!-- Main Chat Area -->
         <main class="main">
             <header class="chat-header">
-                <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+                <div style="display: flex; align-items: center;">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+                    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="收起会话列表">📂</button>
+                </div>
                 <span class="title" id="chatTitle">Zettel WebChat</span>
                 <div class="header-actions">
                     <button class="export-btn" id="exportBtn" title="导出聊天记录">
