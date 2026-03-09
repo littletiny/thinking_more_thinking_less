@@ -1028,6 +1028,111 @@
             background: var(--bg-secondary);
         }
         
+        .mockcraft-menu-btn {
+            background: transparent;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+        
+        .mockcraft-menu-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Prototype Popup Menu */
+        .prototype-menu {
+            position: fixed;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            padding: 6px;
+            min-width: 120px;
+            z-index: 1000;
+        }
+        
+        .prototype-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 12px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: left;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: background 0.15s;
+        }
+        
+        .prototype-menu-item:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .prototype-menu-item.danger {
+            color: var(--danger);
+        }
+        
+        .prototype-menu-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .prototype-menu-separator {
+            height: 1px;
+            background: var(--border);
+            margin: 6px 0;
+        }
+        
+        /* Inline Rename in prototype menu */
+        .prototype-menu-rename {
+            padding: 8px;
+        }
+        
+        .prototype-menu-rename input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .prototype-menu-rename input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .prototype-menu-rename-btns {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .prototype-menu-rename-btns button {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .prototype-menu-rename-btns .save {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .prototype-menu-rename-btns .cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+        
         .prototype-list {
             max-height: 150px;
             overflow-y: auto;
@@ -1919,7 +2024,7 @@
                 <!-- Prototype List Section -->
                 <div class="mockcraft-section" id="prototypeListSection">
                     <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">📄 原型列表</span>
+                        <span class="mockcraft-section-title">原型列表</span>
                         <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
                     </div>
                     <div class="prototype-list" id="prototypeList">
@@ -1933,11 +2038,10 @@
                 <!-- Preview Section -->
                 <div class="mockcraft-section mockcraft-preview-section">
                     <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">👁️ 预览</span>
+                        <span class="mockcraft-section-title">预览</span>
                         <div class="preview-controls">
                             <span class="prototype-version" id="previewVersion"></span>
-                            <button class="mockcraft-small-btn" id="forkPrototypeBtn" title="创建新版本" style="display: none;">📋</button>
-                            <button class="mockcraft-small-btn" id="deletePrototypeBtn" title="删除" style="display: none;">🗑️</button>
+                            <button class="mockcraft-menu-btn" id="prototypeMenuBtn" title="更多操作" style="display: none;">⋮</button>
                         </div>
                     </div>
                     <div class="mockcraft-preview-container" id="mockcraftPreviewContainer">
@@ -1954,7 +2058,7 @@
                 <!-- Interaction Controls Section -->
                 <div class="mockcraft-section" id="interactionSection" style="display: none;">
                     <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">🎮 交互控制</span>
+                        <span class="mockcraft-section-title">交互控制</span>
                     </div>
                     <div class="interaction-controls" id="interactionControls">
                         <!-- Dynamically generated controls -->
@@ -1964,11 +2068,9 @@
                 <!-- Quick Actions -->
                 <div class="mockcraft-actions">
                     <button class="mockcraft-action-btn" id="generatePrototypeBtn">
-                        <span>✨</span>
                         <span>生成原型</span>
                     </button>
                     <button class="mockcraft-action-btn secondary" id="importHtmlBtn">
-                        <span>📥</span>
                         <span>导入HTML</span>
                     </button>
                 </div>

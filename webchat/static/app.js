@@ -650,7 +650,9 @@ function parseContentToBlocks(content) {
         }
     }
     
-    return blocks.length > 0 ? blocks : [{ type: 'output', content: content }];
+    const result = blocks.length > 0 ? blocks : [{ type: 'output', content: content }];
+    console.log('[parseContentToBlocks] Input length:', content?.length, 'Output blocks:', result.length);
+    return result;
 }
 
 function renderBlock(block, isStreaming = false) {
@@ -658,6 +660,7 @@ function renderBlock(block, isStreaming = false) {
         return renderThinkingBlock(block.content, isStreaming);
     }
     if (block.type === 'tools') {
+        console.log('[renderBlock] Rendering tools block, hideToolsCalls:', hideToolsCalls);
         return renderToolsBlock(block.content);
     }
     return `<div class="message-block markdown">${renderMarkdown(block.content)}</div>`;
@@ -669,7 +672,10 @@ function renderMessageContent(blocks, isStreaming = false) {
 }
 
 function renderMessages(messages = []) {
+    console.log('[renderMessages] Rendering', messages.length, 'messages, hideToolsCalls:', hideToolsCalls);
+    
     if (!currentSession) {
+        console.log('[renderMessages] No current session');
         elements.messages.innerHTML = `
             <div class="empty-state">
                 <div class="logo">📝</div>
@@ -681,6 +687,7 @@ function renderMessages(messages = []) {
     }
     
     if (messages.length === 0) {
+        console.log('[renderMessages] No messages');
         elements.messages.innerHTML = `
             <div class="empty-state">
                 <div class="logo">💬</div>
@@ -1067,7 +1074,9 @@ function renderThinkingBlock(thinking, isStreaming = false) {
 
 function renderToolsBlock(toolCalls) {
     // 渲染工具调用块 - 简洁风格: ToolName (args) status
+    console.log('[renderToolsBlock] Called, hideToolsCalls:', hideToolsCalls, 'toolCalls:', toolCalls?.length);
     if (hideToolsCalls) {
+        console.log('[renderToolsBlock] Hidden, returning empty');
         return '';
     }
     if (!Array.isArray(toolCalls) || toolCalls.length === 0) {
@@ -1405,6 +1414,8 @@ async function loadConversation(session) {
     try {
         const data = await apiGet(`/api/sessions/${session.id}/messages`);
         const messages = data.messages || [];
+        
+        console.log('[loadConversation] Loaded', messages.length, 'messages');
         
         if (messages.length > 0) {
             renderMessages(messages);
@@ -1783,34 +1794,85 @@ function hideThemeDialog() {
 // ============== Image Paste Handling ==============
 
 function handlePaste(e) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    console.log('[Paste] Event triggered', e);
+    
+    const clipboardData = e.clipboardData || e.originalEvent?.clipboardData || window.clipboardData;
+    if (!clipboardData) {
+        console.log('[Paste] No clipboard data available');
+        return;
+    }
+    
+    console.log('[Paste] Clipboard data:', {
+        items: clipboardData.items ? clipboardData.items.length : 0,
+        files: clipboardData.files ? clipboardData.files.length : 0,
+        types: clipboardData.types ? [...clipboardData.types] : []
+    });
     
     let hasImage = false;
     
-    for (const item of items) {
-        if (item.type.startsWith('image/')) {
-            hasImage = true;
-            e.preventDefault();
+    // 优先使用 items (现代浏览器)
+    if (clipboardData.items && clipboardData.items.length > 0) {
+        for (let i = 0; i < clipboardData.items.length; i++) {
+            const item = clipboardData.items[i];
+            console.log(`[Paste] Item ${i}: type=${item.type}, kind=${item.kind}`);
             
-            const blob = item.getAsFile();
-            if (blob) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const dataUrl = event.target.result;
-                    addAttachedImage(dataUrl, item.type);
-                };
-                reader.readAsDataURL(blob);
+            if (item.type.startsWith('image/') || item.kind === 'file') {
+                hasImage = true;
+                e.preventDefault();
+                
+                const blob = item.getAsFile();
+                const mimeType = item.type || 'image/png';
+                console.log(`[Paste] Got file:`, blob, 'mimeType:', mimeType);
+                
+                if (blob) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        console.log('[Paste] FileReader loaded, dataUrl length:', event.target.result.length);
+                        const dataUrl = event.target.result;
+                        addAttachedImage(dataUrl, mimeType);
+                    };
+                    reader.onerror = (err) => {
+                        console.error('[Paste] FileReader error:', err);
+                    };
+                    reader.readAsDataURL(blob);
+                }
             }
         }
     }
     
+    // 备用：使用 files (某些浏览器/场景)
+    if (!hasImage && clipboardData.files && clipboardData.files.length > 0) {
+        for (let i = 0; i < clipboardData.files.length; i++) {
+            const file = clipboardData.files[i];
+            console.log(`[Paste] File ${i}:`, file.name, file.type);
+            
+            if (file.type.startsWith('image/')) {
+                hasImage = true;
+                e.preventDefault();
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    console.log('[Paste] FileReader loaded (from files)');
+                    const dataUrl = event.target.result;
+                    addAttachedImage(dataUrl, file.type);
+                };
+                reader.onerror = (err) => {
+                    console.error('[Paste] FileReader error:', err);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+    
+    console.log('[Paste] hasImage:', hasImage);
     // 如果没有图片，让默认粘贴行为继续（粘贴文本）
 }
 
 function addAttachedImage(dataUrl, mimeType) {
+    console.log('[addAttachedImage] Adding image, mimeType:', mimeType, 'dataUrl length:', dataUrl.length);
     const id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     attachedImages.push({ id, dataUrl, mimeType });
+    console.log('[addAttachedImage] attachedImages count:', attachedImages.length);
     renderImageAttachments();
     updateSendButton();
 }
@@ -1822,17 +1884,21 @@ function removeAttachedImage(id) {
 }
 
 function renderImageAttachments() {
+    console.log('[renderImageAttachments] Rendering, count:', attachedImages.length);
     if (attachedImages.length === 0) {
         elements.imageAttachments.innerHTML = '';
         return;
     }
     
-    elements.imageAttachments.innerHTML = attachedImages.map(img => `
+    const html = attachedImages.map(img => `
         <div class="image-preview" data-id="${img.id}">
             <img src="${img.dataUrl}" alt="Attached image">
             <button class="remove-btn" onclick="removeAttachedImage('${img.id}')">×</button>
         </div>
     `).join('');
+    
+    console.log('[renderImageAttachments] HTML length:', html.length);
+    elements.imageAttachments.innerHTML = html;
 }
 
 function clearAttachedImages() {
@@ -1870,12 +1936,12 @@ function buildMessageContent() {
 // ============== Split Panel Functions ==============
 
 function initSplitPanel() {
-    elements.splitVerticalBtn.addEventListener('click', () => toggleSplit('vertical'));
-    elements.splitHorizontalBtn.addEventListener('click', () => toggleSplit('horizontal'));
-    elements.closeSplitBtn.addEventListener('click', () => toggleSplit(null));
-    elements.renderHtmlBtn.addEventListener('click', renderHtml);
-    elements.clearHtmlBtn.addEventListener('click', clearHtml);
-    elements.refreshHtmlBtn.addEventListener('click', refreshHtml);
+    elements.splitVerticalBtn?.addEventListener('click', () => toggleSplit('vertical'));
+    elements.splitHorizontalBtn?.addEventListener('click', () => toggleSplit('horizontal'));
+    elements.closeSplitBtn?.addEventListener('click', () => toggleSplit(null));
+    elements.renderHtmlBtn?.addEventListener('click', renderHtml);
+    elements.clearHtmlBtn?.addEventListener('click', clearHtml);
+    elements.refreshHtmlBtn?.addEventListener('click', refreshHtml);
     
     // Setup divider drag
     setupDividerDrag();
@@ -1890,35 +1956,35 @@ function toggleSplit(mode) {
     splitMode = mode;
     
     // 更新按钮状态
-    elements.splitVerticalBtn.style.display = mode ? 'none' : 'inline-flex';
-    elements.splitHorizontalBtn.style.display = mode ? 'none' : 'inline-flex';
-    elements.closeSplitBtn.style.display = mode ? 'inline-flex' : 'none';
+    if (elements.splitVerticalBtn) elements.splitVerticalBtn.style.display = mode ? 'none' : 'inline-flex';
+    if (elements.splitHorizontalBtn) elements.splitHorizontalBtn.style.display = mode ? 'none' : 'inline-flex';
+    if (elements.closeSplitBtn) elements.closeSplitBtn.style.display = mode ? 'inline-flex' : 'none';
     
     // 更新容器样式
-    elements.mainContainer.className = 'main-container';
+    if (elements.mainContainer) elements.mainContainer.className = 'main-container';
     
     if (mode === 'vertical') {
-        elements.mainContainer.classList.add('split-vertical');
-        elements.mockcraftPanel.style.display = 'flex';
-        elements.panelDivider.style.display = 'block';
+        if (elements.mainContainer) elements.mainContainer.classList.add('split-vertical');
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.display = 'flex';
+        if (elements.panelDivider) elements.panelDivider.style.display = 'block';
         
         // 设置默认大小
-        elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
-        elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
+        if (elements.chatPanel) elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
     } else if (mode === 'horizontal') {
-        elements.mainContainer.classList.add('split-horizontal');
-        elements.mockcraftPanel.style.display = 'flex';
-        elements.panelDivider.style.display = 'block';
+        if (elements.mainContainer) elements.mainContainer.classList.add('split-horizontal');
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.display = 'flex';
+        if (elements.panelDivider) elements.panelDivider.style.display = 'block';
         
         // 设置默认大小
-        elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
-        elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
+        if (elements.chatPanel) elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
     } else {
         // 关闭分屏
-        elements.mockcraftPanel.style.display = 'none';
-        elements.panelDivider.style.display = 'none';
-        elements.chatPanel.style.flex = '1';
-        elements.mockcraftPanel.style.flex = '1';
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.display = 'none';
+        if (elements.panelDivider) elements.panelDivider.style.display = 'none';
+        if (elements.chatPanel) elements.chatPanel.style.flex = '1';
+        if (elements.mockcraftPanel) elements.mockcraftPanel.style.flex = '1';
     }
     
     showToast(mode ? `已${mode === 'vertical' ? '垂直' : '水平'}分屏` : '已关闭分屏');
@@ -1928,6 +1994,8 @@ function setupDividerDrag() {
     let isDragging = false;
     let startPos = 0;
     let startSize = 50;
+    
+    if (!elements.panelDivider) return;
     
     elements.panelDivider.addEventListener('mousedown', (e) => {
         if (!splitMode) return;
@@ -1971,6 +2039,8 @@ function setupDividerDrag() {
 }
 
 function renderHtml() {
+    if (!elements.htmlInput || !elements.htmlPreviewContent) return;
+    
     const html = elements.htmlInput.value.trim();
     if (!html) {
         showToast('请输入 HTML 代码');
@@ -1991,6 +2061,8 @@ function renderHtml() {
 }
 
 function clearHtml() {
+    if (!elements.htmlInput || !elements.htmlPreviewContent) return;
+    
     elements.htmlInput.value = '';
     elements.htmlPreviewContent.innerHTML = `
         <div class="html-preview-placeholder">
@@ -2003,6 +2075,8 @@ function clearHtml() {
 }
 
 function refreshHtml() {
+    if (!elements.htmlPreviewContent) return;
+    
     const iframe = elements.htmlPreviewContent.querySelector('iframe');
     if (iframe) {
         iframe.src = iframe.src;
@@ -2049,7 +2123,12 @@ async function init() {
     }
     
     // Setup paste handling
-    elements.messageInput.addEventListener('paste', handlePaste);
+    if (elements.messageInput) {
+        console.log('[Init] Binding paste event to messageInput');
+        elements.messageInput.addEventListener('paste', handlePaste);
+    } else {
+        console.error('[Init] messageInput element not found!');
+    }
     
     await loadSessions();
     
