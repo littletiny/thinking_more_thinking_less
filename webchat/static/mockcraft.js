@@ -454,8 +454,10 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     menu.className = 'prototype-menu';
     menu.id = 'prototypeMenu';
     
-    // 菜单只保留删除功能
+    // 菜单：重命名和删除
     menu.innerHTML = `
+        <button class="prototype-menu-item" data-action="rename">重命名</button>
+        <div class="prototype-menu-separator"></div>
         <button class="prototype-menu-item danger" data-action="delete">删除</button>
     `;
     
@@ -463,7 +465,7 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
     
     // 计算菜单位置，确保不超出屏幕
     const menuWidth = 120; // 菜单最小宽度
-    const menuHeight = 50; // 估计菜单高度
+    const menuHeight = 100; // 估计菜单高度（两个选项+分隔线）
     
     let left = rect.right - menuWidth;
     let top = rect.bottom + 4;
@@ -510,11 +512,29 @@ function handlePrototypeMenuAction(action, protoId) {
     if (!proto) return;
     
     switch (action) {
+        case 'rename':
+            closePrototypeMenu();
+            showRenamePrototypeDialog(proto);
+            break;
         case 'delete':
             closePrototypeMenu();
             showDeletePrototypeConfirmForProto(proto);
             break;
     }
+}
+
+function showRenamePrototypeDialog(proto) {
+    if (!proto) return;
+    
+    // 去掉 http:// 或 https:// 前缀用于显示和默认值
+    const displayName = stripUrlPrefix(proto.name);
+    
+    const newName = prompt('重命名原型:', displayName);
+    if (!newName || newName === proto.name) return;
+    
+    updatePrototype(proto.id, { name: newName.trim() })
+        .then(() => showToast('已重命名'))
+        .catch(err => showToast(`重命名失败: ${err.message}`));
 }
 
 function showDeletePrototypeConfirmForProto(proto) {
@@ -585,12 +605,11 @@ function showImportHtmlDialog() {
                 </div>
                 <div class="mockcraft-import-body">
                     <div class="mockcraft-import-tabs">
-                        <button class="mockcraft-import-tab active" data-tab="file">📁 从文件加载</button>
-                        <button class="mockcraft-import-tab" data-tab="paste">📋 粘贴代码</button>
+                        <button class="mockcraft-import-tab active" data-tab="file">从文件加载</button>
+                        <button class="mockcraft-import-tab" data-tab="paste">粘贴代码</button>
                     </div>
                     <div class="mockcraft-import-panel active" data-panel="file">
                         <div class="mockcraft-file-dropzone" id="fileDropzone">
-                            <div class="mockcraft-file-icon">📄</div>
                             <p>点击选择或拖拽 HTML 文件到此处</p>
                             <input type="file" id="htmlFileInput" accept=".html,.htm,.txt" hidden>
                         </div>
@@ -604,7 +623,7 @@ function showImportHtmlDialog() {
                     </div>
                     <div class="mockcraft-import-name">
                         <label>原型名称:</label>
-                        <input type="text" id="prototypeNameInput" placeholder="输入原型名称" value="导入的原型">
+                        <input type="text" id="prototypeNameInput" placeholder="输入原型名称">
                     </div>
                 </div>
                 <div class="mockcraft-import-footer">
