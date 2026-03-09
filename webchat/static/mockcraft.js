@@ -1495,13 +1495,22 @@ function renderPageOrchestration() {
     // 如果没有页面（原型），显示提示
     if (!pages || pages.length === 0) {
         console.log('[renderPageOrchestration] no pages');
+        const addBtnHtml = currentProto ? `
+            <button class="proto-action-btn" onclick="MockCraft.addCurrentToOrchestration()" style="margin-top: 12px;">
+                ➕ 将当前原型加入编排
+            </button>
+        ` : '';
         container.innerHTML = `
             <div class="page-orchestration">
-                <p style="color: var(--text-secondary); font-size: 13px; padding: 12px;">没有可播放的页面（原型）</p>
+                <p style="color: var(--text-secondary); font-size: 13px; padding: 12px;">编排列表为空</p>
+                ${addBtnHtml}
             </div>
         `;
         return;
     }
+    
+    // 检查当前选中的原型是否在编排中
+    const currentProtoInPages = currentProto && pages.some(p => p.id === currentProto.id);
     
     let html = `
         <div class="page-orchestration">
@@ -1990,38 +1999,54 @@ function updatePreviewForCurrentPage() {
  * 初始化页面编排 - 把所有原型作为页面
  */
 function initPagesForPrototype(prototype) {
-    console.log('[initPagesForPrototype] prototype:', prototype?.name, 'total prototypes:', MockCraftState.prototypes.length, 'existing pages:', MockCraftState.pages.length);
+    console.log('[initPagesForPrototype] prototype:', prototype?.name, 'existing pages:', MockCraftState.pages.length);
     
-    // 如果编排列表为空，初始化所有原型
-    // 否则保留用户手动调整的编排状态
-    if (MockCraftState.pages.length === 0) {
-        const pages = MockCraftState.prototypes.map((proto, index) => ({
-            id: proto.id,
-            name: proto.name,
-            type: 'prototype',
-            protoIndex: index
-        }));
-        MockCraftState.pages = pages;
-        console.log('[initPagesForPrototype] initialized pages from prototypes:', pages.length);
-    } else {
-        console.log('[initPagesForPrototype] keeping existing pages');
-    }
-    
-    // 更新当前页面索引为选中的原型
-    MockCraftState.currentPageIndex = MockCraftState.pages.findIndex(p => p.id === prototype?.id);
-    if (MockCraftState.currentPageIndex === -1) {
-        // 如果选中的原型不在编排中，默认显示第一个
-        MockCraftState.currentPageIndex = 0;
-    }
-    
+    // 完全手动管理编排，不自动初始化
+    // 只停止播放状态
     MockCraftState.isPlaying = false;
     if (MockCraftState.playInterval) {
         clearInterval(MockCraftState.playInterval);
         MockCraftState.playInterval = null;
     }
+    
+    // 如果选中的原型在编排中，更新当前索引
+    const pageIndex = MockCraftState.pages.findIndex(p => p.id === prototype?.id);
+    if (pageIndex !== -1) {
+        MockCraftState.currentPageIndex = pageIndex;
+    }
 }
 
 // ============== Export for Global Access ==============
+
+// 将当前原型加入编排
+function addCurrentToOrchestration() {
+    const proto = MockCraftState.currentPrototype;
+    if (!proto) {
+        showToast('请先选择一个原型');
+        return;
+    }
+    
+    // 检查是否已存在
+    if (MockCraftState.pages.some(p => p.id === proto.id)) {
+        showToast('该原型已在编排中');
+        return;
+    }
+    
+    // 添加到页面列表
+    MockCraftState.pages.push({
+        id: proto.id,
+        name: proto.name,
+        type: 'prototype',
+        protoIndex: MockCraftState.prototypes.findIndex(p => p.id === proto.id)
+    });
+    
+    // 设置为当前页面
+    MockCraftState.currentPageIndex = MockCraftState.pages.length - 1;
+    
+    // 重新渲染
+    renderPageOrchestration();
+    showToast('已加入编排');
+}
 
 // 显示重命名对话框
 function showRenameDialog() {
@@ -2061,6 +2086,7 @@ window.MockCraft = {
     togglePlayback,
     stopPlayback,
     openMockCraftPanel,
+    addCurrentToOrchestration,
     showRenameDialog,
     showDeleteDialog
 };
