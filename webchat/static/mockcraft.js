@@ -14,12 +14,17 @@ const MockCraftState = {
     prototypes: [],
     currentPrototype: null,
     currentState: {},
-    isLoading: false
+    isLoading: false,
+    pages: [],           // 页面列表
+    currentPageIndex: 0, // 当前播放页面索引
+    isPlaying: false,    // 是否正在播放
+    playInterval: null   // 播放定时器
 };
 
 let prototypeMenuVisible = false;  // 菜单显示状态
 let isCreatingPrototype = false;   // 正在新建原型状态
 let renamingPrototypeId = null;    // 正在重命名的原型ID
+let draggedPageIndex = null;       // 拖拽中的页面索引
 
 // ============== Utils ==============
 
@@ -73,12 +78,16 @@ async function mockcraftApiDelete(url) {
 // ============== Prototype Management ==============
 
 async function loadPrototypes(sessionId = null) {
+    console.log('[loadPrototypes] called, sessionId:', sessionId);
     try {
         const url = sessionId 
             ? `/api/mockcraft/prototypes?session_id=${sessionId}`
             : '/api/mockcraft/prototypes';
+        console.log('[loadPrototypes] fetching:', url);
         const data = await mockcraftApiGet(url);
+        console.log('[loadPrototypes] got data:', data);
         MockCraftState.prototypes = data.prototypes || [];
+        console.log('[loadPrototypes] set prototypes:', MockCraftState.prototypes.length);
         renderPrototypeList();
     } catch (err) {
         console.error('Failed to load prototypes:', err);
@@ -160,6 +169,13 @@ async function renderPrototypePreview(protoId, state = null) {
         iframe.style.display = 'block';
         placeholder.style.display = 'none';
         
+        // iframe加载完成后，如果有页面，自动切换到当前页面
+        iframe.onload = () => {
+            setTimeout(() => {
+                updatePreviewForCurrentPage();
+            }, 100);
+        };
+        
         return data.html;
     } catch (err) {
         showToast(`Failed to render prototype: ${err.message}`);
@@ -169,10 +185,80 @@ async function renderPrototypePreview(protoId, state = null) {
 
 function addPostMessageBridge(html) {
     // 如果HTML没有postMessage监听，添加一个
-    if (!html.includes('mockcraft_state_change')) {
-        const bridgeScript = `
+    const bridgeScript = `
 <script>
 (function() {
+    // 页面状态管理
+    window.mockcraftPageState = {
+        currentPageId: null,
+        currentPageIndex: 0,
+        pages: []
+    };
+    
+    // 初始化时解析页面
+    function initPages() {
+        // 优先检查 data-page 标记的元素
+        const pageElements = document.querySelectorAll('[data-page], [id^="page"], section[id]');
+        window.mockcraftPageState.pages = Array.from(pageElements).map((el, idx) => ({
+            id: el.id || el.dataset.page || 'page_' + idx,
+            element: el
+        }));
+    }
+    
+    // 显示指定页面
+    function showPage(pageIdOrIndex) {
+        const pages = window.mockcraftPageState.pages;
+        let targetPage = null;
+        
+        if (typeof pageIdOrIndex === 'number') {
+            targetPage = pages[pageIdOrIndex];
+        } else {
+            targetPage = pages.find(p => p.id === pageIdOrIndex);
+        }
+        
+        if (!targetPage) return;
+        
+        // 隐藏所有页面
+        pages.forEach(p => {
+            if (p.element) {
+                p.element.style.display = 'none';
+            }
+        });
+        
+        // 显示目标页面
+        if (targetPage.element) {
+            targetPage.element.style.display = 'block';
+            window.mockcraftPageState.currentPageId = targetPage.id;
+            window.mockcraftPageState.currentPageIndex = pages.indexOf(targetPage);
+        }
+    }
+    
+    // 如果没有 data-page 或 id，将整体作为一个页面
+    function ensurePageVisibility() {
+        const hasPageMarkers = document.querySelector('[data-page], [id^="page"]');
+        if (!hasPageMarkers) {
+            // 没有页面标记，整体显示
+            return;
+        }
+        
+        initPages();
+        // 默认显示第一页
+        if (window.mockcraftPageState.pages.length > 0) {
+            showPage(0);
+        }
+    }
+    
+    // 监听来自父窗口的消息
+    window.addEventListener('message', function(e) {
+        if (e.data?.type === 'mockcraft_goto_page') {
+            if (typeof e.data.pageIndex === 'number') {
+                showPage(e.data.pageIndex);
+            } else if (e.data.pageId) {
+                showPage(e.data.pageId);
+            }
+        }
+    });
+    
     // 监听所有交互元素的变化
     document.addEventListener('click', function(e) {
         if (e.target.matches('[data-interaction]')) {
@@ -197,15 +283,23 @@ function addPostMessageBridge(html) {
             }, '*');
         }
     });
+    
+    // DOM加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensurePageVisibility);
+    } else {
+        ensurePageVisibility();
+    }
 })();
 <\/script>`;
-        
-        if (html.includes('</body>')) {
-            html = html.replace('</body>', bridgeScript + '</body>');
-        } else {
-            html += bridgeScript;
-        }
+    
+    // 总是添加桥接脚本
+    if (html.includes('</body>')) {
+        html = html.replace('</body>', bridgeScript + '</body>');
+    } else {
+        html += bridgeScript;
     }
+    
     return html;
 }
 
@@ -263,76 +357,11 @@ function renderPrototypeList() {
         return;
     }
     
-    // 如果正在重命名某个原型
-    if (renamingPrototypeId) {
-        const proto = MockCraftState.prototypes.find(p => p.id === renamingPrototypeId);
-        if (proto) {
-            listEl.innerHTML = MockCraftState.prototypes.map(proto => {
-                if (proto.id === renamingPrototypeId) {
-                    return `
-                        <div class="prototype-item-wrapper">
-                            <div class="prototype-item editing">
-                                <input type="text" id="renamePrototypeInput" value="${escapeHtml(proto.name)}" maxlength="50" autofocus>
-                            </div>
-                            <div class="prototype-edit-btns">
-                                <button class="prototype-edit-btn save" id="saveRenameBtn">保存</button>
-                                <button class="prototype-edit-btn cancel" id="cancelRenameBtn">取消</button>
-                            </div>
-                        </div>
-                    `;
-                }
-                return `
-                    <div class="prototype-item-wrapper" style="position: relative;">
-                        <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
-                             data-id="${proto.id}">
-                            <span class="name">${escapeHtml(proto.name)}</span>
-                        </div>
-                        <button class="prototype-menu-trigger" data-proto-id="${proto.id}" onclick="event.stopPropagation()">⋮</button>
-                    </div>
-                `;
-            }).join('');
-            
-            // 绑定重命名事件
-            const input = document.getElementById('renamePrototypeInput');
-            const saveBtn = document.getElementById('saveRenameBtn');
-            const cancelBtn = document.getElementById('cancelRenameBtn');
-            
-            if (input) {
-                input.focus();
-                input.select();
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') confirmRenamePrototype(renamingPrototypeId, input.value);
-                    if (e.key === 'Escape') cancelRenamePrototype();
-                });
-            }
-            
-            saveBtn?.addEventListener('click', () => confirmRenamePrototype(renamingPrototypeId, input?.value || ''));
-            cancelBtn?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                cancelRenamePrototype();
-            });
-            
-            // 绑定其他项的菜单按钮事件
-            listEl.querySelectorAll('.prototype-menu-trigger').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const protoId = btn.dataset.protoId;
-                    togglePrototypeMenuForItem(protoId, btn);
-                });
-            });
-            
-            // 绑定其他项的点击事件
-            listEl.querySelectorAll('.prototype-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    selectPrototype(item.dataset.id);
-                });
-            });
-            
-            return;
-        }
-    }
+    // 注：重命名功能现在通过页面编排面板的操作按钮处理
     
+    console.log('[renderPrototypeList] prototypes count:', MockCraftState.prototypes.length);
     if (MockCraftState.prototypes.length === 0) {
+        console.log('[renderPrototypeList] no prototypes');
         listEl.innerHTML = `
             <div class="prototype-placeholder">
                 <p>暂无原型</p>
@@ -342,53 +371,232 @@ function renderPrototypeList() {
         return;
     }
     
+    console.log('[renderPrototypeList] rendering', MockCraftState.prototypes.length, 'prototypes');
     listEl.innerHTML = MockCraftState.prototypes.map(proto => `
-        <div class="prototype-item-wrapper" style="position: relative;">
-            <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
-                 data-id="${proto.id}">
-                <span class="name">${escapeHtml(proto.name)}</span>
-            </div>
-            <button class="prototype-menu-trigger" data-proto-id="${proto.id}" onclick="event.stopPropagation()">⋮</button>
+        <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
+             data-id="${proto.id}">
+            <span class="name">${escapeHtml(proto.name)}</span>
         </div>
     `).join('');
+    console.log('[renderPrototypeList] rendered');
     
-    // 添加点击事件
+    // 添加点击事件 - 选中后自动打开操作面板
     listEl.querySelectorAll('.prototype-item').forEach(item => {
         item.addEventListener('click', () => {
             selectPrototype(item.dataset.id);
         });
     });
-    
-    // 添加菜单按钮事件
-    listEl.querySelectorAll('.prototype-menu-trigger').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const protoId = btn.dataset.protoId;
-            togglePrototypeMenuForItem(protoId, btn);
-        });
-    });
 }
 
 async function selectPrototype(protoId) {
+    console.log('[selectPrototype] Starting for protoId:', protoId);
     try {
         const data = await getPrototype(protoId);
+        console.log('[selectPrototype] got data:', data ? 'yes' : 'no', 'prototype:', data?.prototype?.id, 'html_content length:', data?.html_content?.length);
+        
         MockCraftState.currentPrototype = data.prototype;
         MockCraftState.currentState = data.prototype.current_state || {};
         
-        renderPrototypeList();
-        renderPrototypePreview(protoId);
-        renderInteractionControls(data.prototype);
+        // 初始化页面编排 - 注意: html_content 在 data 根级别，不在 prototype 里
+        initPagesForPrototype({
+            ...data.prototype,
+            html_content: data.html_content
+        });
         
-        document.getElementById('interactionSection').style.display = 'block';
+        console.log('[selectPrototype] init done, pages:', MockCraftState.pages.length);
+        
+        renderPrototypeList();
+        
+        try {
+            await renderPrototypePreview(protoId);
+        } catch (previewErr) {
+            console.error('[selectPrototype] renderPrototypePreview failed:', previewErr);
+        }
+        
+        // 使用新的页面编排替代交互控制
+        renderPageOrchestration();
+        
+        // 自动打开分屏显示 MockCraft 面板
+        console.log('[selectPrototype] calling openMockCraftPanel...');
+        openMockCraftPanel();
+        
+        // 延迟确保渲染
+        setTimeout(() => {
+            console.log('[selectPrototype] delayed render check');
+            // 确保面板显示
+            openMockCraftPanel();
+            // 确保页面编排渲染
+            renderPageOrchestration();
+        }, 100);
+        
+        console.log('[selectPrototype] all done');
         
     } catch (err) {
-        console.error('Failed to select prototype:', err);
+        console.error('[selectPrototype] Failed:', err);
     }
+}
+
+/**
+ * 打开 MockCraft 面板
+ */
+function openMockCraftPanel() {
+    console.log('[openMockCraftPanel] Starting...');
+    
+    const mainContainer = document.getElementById('mainContainer');
+    const mockcraftPanel = document.getElementById('mockcraftPanel');
+    const panelDivider = document.getElementById('panelDivider');
+    const chatPanel = document.getElementById('chatPanel');
+    
+    console.log('[openMockCraftPanel] Elements:', {
+        mainContainer: !!mainContainer,
+        mockcraftPanel: !!mockcraftPanel,
+        panelDivider: !!panelDivider,
+        chatPanel: !!chatPanel
+    });
+    
+    if (!mainContainer || !mockcraftPanel) {
+        console.error('[openMockCraftPanel] Missing required elements!');
+        return;
+    }
+    
+    // 删除内联的 display: none 样式
+    mockcraftPanel.removeAttribute('style');
+    
+    // 确保主容器是 flex 布局
+    mainContainer.style.display = 'flex';
+    mainContainer.style.flexDirection = 'row';
+    
+    // 添加垂直分屏样式
+    mainContainer.classList.remove('split-horizontal');
+    mainContainer.classList.add('split-vertical');
+    console.log('[openMockCraftPanel] Added split-vertical class, mainContainer display:', mainContainer.style.display);
+    
+    // 显示面板
+    mockcraftPanel.style.display = 'flex';
+    mockcraftPanel.style.flex = '0 0 50%';
+    mockcraftPanel.style.minWidth = '0';
+    mockcraftPanel.style.minHeight = '0';
+    mockcraftPanel.style.overflow = 'hidden';
+    console.log('[openMockCraftPanel] Set mockcraftPanel display to flex, current:', mockcraftPanel.style.display);
+    
+    if (panelDivider) {
+        panelDivider.style.display = 'block';
+        panelDivider.style.width = '4px';
+        console.log('[openMockCraftPanel] Set panelDivider display to block');
+    }
+    
+    // 设置大小 (50/50)
+    if (chatPanel) {
+        chatPanel.style.flex = '0 0 50%';
+        chatPanel.style.minWidth = '0';
+        chatPanel.style.minHeight = '0';
+        chatPanel.style.overflow = 'hidden';
+        console.log('[openMockCraftPanel] Set chatPanel flex to 50%');
+    }
+    
+    // 更新分屏按钮状态
+    const splitVerticalBtn = document.getElementById('splitVerticalBtn');
+    const splitHorizontalBtn = document.getElementById('splitHorizontalBtn');
+    const closeSplitBtn = document.getElementById('closeSplitBtn');
+    
+    if (splitVerticalBtn) splitVerticalBtn.style.display = 'none';
+    if (splitHorizontalBtn) splitHorizontalBtn.style.display = 'none';
+    if (closeSplitBtn) closeSplitBtn.style.display = 'inline-flex';
+    
+    // 重新加载所有原型
+    loadPrototypes();
+    
+    console.log('[openMockCraftPanel] Done!');
+    
+    // 诊断：检查元素尺寸
+    setTimeout(() => {
+        const rect = mockcraftPanel.getBoundingClientRect();
+        console.log('[openMockCraftPanel] Panel dimensions:', {
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            left: rect.left,
+            visible: rect.width > 0 && rect.height > 0
+        });
+        
+        // 检查内部元素
+        const placeholder = document.getElementById('mockcraftPlaceholder');
+        const iframe = document.getElementById('mockcraftPreviewFrame');
+        const previewContainer = document.getElementById('mockcraftPreviewContainer');
+        
+        if (placeholder) {
+            const phRect = placeholder.getBoundingClientRect();
+            console.log('[openMockCraftPanel] Placeholder:', {
+                width: phRect.width,
+                height: phRect.height,
+                display: getComputedStyle(placeholder).display,
+                visibility: getComputedStyle(placeholder).visibility
+            });
+        }
+        
+        if (previewContainer) {
+            const pcRect = previewContainer.getBoundingClientRect();
+            console.log('[openMockCraftPanel] PreviewContainer:', {
+                width: pcRect.width,
+                height: pcRect.height
+            });
+        }
+        
+        // 确保交互控制区域显示
+        const interactionSection = document.getElementById('interactionSection');
+        const interactionControls = document.getElementById('interactionControls');
+        if (interactionSection) {
+            interactionSection.style.display = 'block';
+            console.log('[openMockCraftPanel] Set interactionSection display to block');
+        }
+        if (interactionControls && MockCraftState.pages && MockCraftState.pages.length > 0) {
+            // 如果有页面但没有内容，重新渲染
+            if (!interactionControls.innerHTML.trim() || interactionControls.innerHTML.includes('没有可编排的页面')) {
+                console.log('[openMockCraftPanel] Re-rendering page orchestration');
+                renderPageOrchestration();
+            }
+        }
+        
+        // 修复预览区域高度 - 不要覆盖 iframe/placeholder 的显示状态，让 renderPrototypePreview 控制
+        const previewSection = mockcraftPanel.querySelector('.mockcraft-preview-section');
+        if (previewSection) {
+            previewSection.style.flex = '1';
+            previewSection.style.minHeight = '300px';
+            previewSection.style.display = 'flex';
+            previewSection.style.flexDirection = 'column';
+        }
+        
+        const previewCont = document.getElementById('mockcraftPreviewContainer');
+        if (previewCont) {
+            previewCont.style.flex = '1';
+            previewCont.style.minHeight = '200px';
+        }
+        
+        // 检查面板的计算样式
+        const panelStyle = getComputedStyle(mockcraftPanel);
+        console.log('[openMockCraftPanel] Panel computed style:', {
+            display: panelStyle.display,
+            visibility: panelStyle.visibility,
+            opacity: panelStyle.opacity,
+            zIndex: panelStyle.zIndex,
+            overflow: panelStyle.overflow,
+            position: panelStyle.position
+        });
+    }, 200);
 }
 
 function clearPreview() {
     MockCraftState.currentPrototype = null;
     MockCraftState.currentState = {};
+    MockCraftState.pages = [];
+    MockCraftState.currentPageIndex = 0;
+    MockCraftState.isPlaying = false;
+    
+    // 清除定时器
+    if (MockCraftState.playInterval) {
+        clearInterval(MockCraftState.playInterval);
+        MockCraftState.playInterval = null;
+    }
     
     const iframe = document.getElementById('mockcraftPreviewFrame');
     const placeholder = document.getElementById('mockcraftPlaceholder');
@@ -471,12 +679,14 @@ function updateInteractionControls() {
 // ============== Event Handlers ==============
 
 function initMockCraft() {
-    // 加载原型列表
-    loadPrototypes(currentSession?.id);
+    console.log('[initMockCraft] starting...');
+    // 加载所有原型（不限定 session）
+    loadPrototypes();
+    console.log('[initMockCraft] finished');
     
     // 刷新按钮
     document.getElementById('refreshMockcraftBtn')?.addEventListener('click', () => {
-        loadPrototypes(currentSession?.id);
+        loadPrototypes();
     });
     
     // 新建原型按钮
@@ -499,7 +709,12 @@ function initMockCraft() {
     });
     
     // 导入HTML按钮
-    document.getElementById('importHtmlBtn')?.addEventListener('click', showImportHtmlDialog);
+    const importBtn = document.getElementById('importHtmlBtn');
+    console.log('[initMockCraft] importHtmlBtn:', !!importBtn);
+    importBtn?.addEventListener('click', () => {
+        console.log('[initMockCraft] importHtmlBtn clicked');
+        showImportHtmlDialog();
+    });
     
     // 点击外部关闭菜单
     document.addEventListener('click', () => {
@@ -1109,7 +1324,533 @@ function showImportHtmlDialog() {
     updateImportButton();
 }
 
+// ============== Page Orchestration Functions ==============
+
+/**
+ * 从HTML内容中解析页面
+ * 支持以下方式定义页面:
+ * 1. <!-- page: 页面名称 --> 注释标记
+ * 2. <section data-page="页面名称"> 元素标记
+ * 3. <div class="page" id="pageX"> 自动检测
+ */
+function parsePagesFromHtml(html) {
+    console.log('[parsePagesFromHtml] html length:', html?.length);
+    const pages = [];
+    
+    // 方法1: 检查 <!-- page: 名称 --> 注释
+    const pageCommentRegex = /<!--\s*page:\s*([^>]+)-->/gi;
+    let match;
+    while ((match = pageCommentRegex.exec(html)) !== null) {
+        console.log('[parsePagesFromHtml] found comment page:', match[1].trim());
+        pages.push({
+            id: `page_${pages.length}`,
+            name: match[1].trim(),
+            type: 'comment'
+        });
+    }
+    
+    // 方法2: 检查 data-page 属性
+    if (pages.length === 0) {
+        const dataPageRegex = /data-page=["']([^"']+)["']/gi;
+        while ((match = dataPageRegex.exec(html)) !== null) {
+            console.log('[parsePagesFromHtml] found data-page:', match[1].trim());
+            // 去重
+            if (!pages.find(p => p.name === match[1].trim())) {
+                pages.push({
+                    id: `page_${pages.length}`,
+                    name: match[1].trim(),
+                    type: 'data-page'
+                });
+            }
+        }
+    }
+    
+    // 方法3: 检查 section id 或 class 包含 page
+    if (pages.length === 0) {
+        const sectionRegex = /<section[^>]*id=["']([^"']*page[^"']*)["'][^>]*>/gi;
+        while ((match = sectionRegex.exec(html)) !== null) {
+            console.log('[parsePagesFromHtml] found section page:', match[1].trim());
+            pages.push({
+                id: match[1].trim(),
+                name: match[1].trim().replace(/page[_-]?/i, '页面 '),
+                type: 'section'
+            });
+        }
+    }
+    
+    // 方法4: 检查 h1-h6 标题作为页面 - 修复以支持多行
+    if (pages.length === 0) {
+        // 使用更宽松的匹配来支持多行标题
+        const headingRegex = /<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi;
+        let count = 0;
+        while ((match = headingRegex.exec(html)) !== null && count < 10) {
+            // 清理标题内容（移除HTML标签）
+            const cleanName = match[1].replace(/<[^>]+>/g, '').trim();
+            console.log('[parsePagesFromHtml] found heading page:', cleanName);
+            if (cleanName) {
+                pages.push({
+                    id: `page_${count}`,
+                    name: cleanName,
+                    type: 'heading'
+                });
+                count++;
+            }
+        }
+    }
+    
+    // 如果还没有页面，整个HTML作为一个页面
+    if (pages.length === 0) {
+        pages.push({
+            id: 'page_0',
+            name: '默认页面',
+            type: 'default'
+        });
+    }
+    
+    console.log('[parsePagesFromHtml] total pages:', pages.length);
+    return pages;
+}
+
+/**
+ * 渲染页面编排列表
+ */
+function renderPageOrchestration() {
+    const container = document.getElementById('interactionControls');
+    const section = document.getElementById('interactionSection');
+    
+    console.log('[renderPageOrchestration] container:', !!container, 'section:', !!section, 'pages:', MockCraftState.pages?.length);
+    
+    if (!container || !section) {
+        console.error('[renderPageOrchestration] missing elements!', {container: !!container, section: !!section});
+        return;
+    }
+    
+    // 保存当前输入值（如果存在）
+    const intervalInput = document.getElementById('playIntervalInput');
+    const loopCheckbox = document.getElementById('loopPlayback');
+    const savedInterval = intervalInput?.value || '2';
+    const savedLoop = loopCheckbox?.checked || false;
+    
+    // 每次都显示区域
+    section.style.display = 'block';
+    
+    const isPlaying = MockCraftState.isPlaying;
+    const currentIndex = MockCraftState.currentPageIndex;
+    const pages = MockCraftState.pages;
+    const currentProto = MockCraftState.currentPrototype;
+    
+    console.log('[renderPageOrchestration] currentProto:', currentProto?.name);
+    
+    // 功能按钮（重命名、删除当前原型）
+    let actionButtonsHtml = '';
+    console.log('[renderPageOrchestration] currentProto for buttons:', currentProto?.id, currentProto?.name);
+    if (currentProto) {
+        actionButtonsHtml = `
+            <div class="proto-actions">
+                <button class="proto-action-btn" onclick="MockCraft.showRenameDialog()">✏️ 重命名当前</button>
+                <button class="proto-action-btn danger" onclick="MockCraft.showDeleteDialog()">🗑️ 删除当前</button>
+            </div>
+        `;
+        console.log('[renderPageOrchestration] actionButtonsHtml generated');
+    } else {
+        console.log('[renderPageOrchestration] no currentProto, skipping action buttons');
+    }
+    
+    // 如果没有页面（原型），显示提示
+    if (!pages || pages.length === 0) {
+        console.log('[renderPageOrchestration] no pages');
+        container.innerHTML = `
+            <div class="page-orchestration">
+                ${actionButtonsHtml}
+                <p style="color: var(--text-secondary); font-size: 13px; padding: 12px;">没有可播放的页面（原型）</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="page-orchestration">
+            
+            <!-- 播放控制栏（合并间隔和循环设置） -->
+            <div class="playback-controls">
+                <button class="playback-btn ${isPlaying ? 'active' : ''}" id="playPauseBtn" title="${isPlaying ? '暂停' : '播放'}">
+                    ${isPlaying ? '⏸️' : '▶️'}
+                </button>
+                <button class="playback-btn" id="prevPageBtn" title="上一页">⏮️</button>
+                <button class="playback-btn" id="nextPageBtn" title="下一页">⏭️</button>
+                <span class="page-indicator">${currentIndex + 1} / ${pages.length}</span>
+                <div class="playback-options">
+                    <label class="playback-option">
+                        <input type="number" id="playIntervalInput" min="1" max="60" value="2" title="间隔秒数">
+                        <span>s</span>
+                    </label>
+                    <label class="playback-option checkbox" title="循环播放">
+                        <input type="checkbox" id="loopPlayback">
+                        <span>循环</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- 页面列表 -->
+            <div class="page-list" id="pageList">
+    `;
+    
+    pages.forEach((page, index) => {
+        const isActive = index === currentIndex;
+        const isPlayingThis = isPlaying && isActive;
+        html += `
+            <div class="page-item ${isActive ? 'active' : ''} ${isPlayingThis ? 'playing' : ''}" 
+                 data-index="${index}" 
+                 draggable="true"
+                 title="拖拽排序点击切换页面">
+                <span class="page-drag-handle">☰</span>
+                <span class="page-number">${index + 1}</span>
+                <span class="page-name">${escapeHtml(page.name)}</span>
+                <span class="page-type">📄</span>
+                ${isActive ? '<span class="page-status">●</span>' : ''}
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+            
+            <!-- 功能按钮 -->
+            ${actionButtonsHtml}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    
+    // 恢复保存的值
+    const newIntervalInput = document.getElementById('playIntervalInput');
+    const newLoopCheckbox = document.getElementById('loopPlayback');
+    if (newIntervalInput) newIntervalInput.value = savedInterval;
+    if (newLoopCheckbox) newLoopCheckbox.checked = savedLoop;
+    
+    // 绑定事件
+    console.log('[renderPageOrchestration] About to bind events...');
+    try {
+        bindPageOrchestrationEvents();
+        console.log('[renderPageOrchestration] Events bound successfully');
+    } catch (err) {
+        console.error('[renderPageOrchestration] Error binding events:', err);
+    }
+
+/**
+ * 获取页面类型图标
+ */
+function getPageTypeIcon(type) {
+    const icons = {
+        'comment': '📝',
+        'data-page': '📄',
+        'section': '📖',
+        'heading': '📓',
+        'default': '📄'
+    };
+    return icons[type] || '📄';
+}
+
+/**
+ * 绑定页面编排事件
+ */
+function bindPageOrchestrationEvents() {
+    console.log('[bindPageOrchestrationEvents] Binding events...');
+    
+    // 播放/暂停
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    console.log('[bindPageOrchestrationEvents] playPauseBtn:', !!playPauseBtn);
+    playPauseBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] playPauseBtn clicked');
+        togglePlayback();
+    });
+    
+    // 上一页/下一页
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+    console.log('[bindPageOrchestrationEvents] prevPageBtn:', !!prevPageBtn, 'nextPageBtn:', !!nextPageBtn);
+    
+    prevPageBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] prevPageBtn clicked');
+        navigatePage(-1);
+    });
+    nextPageBtn?.addEventListener('click', () => {
+        console.log('[bindPageOrchestrationEvents] nextPageBtn clicked');
+        navigatePage(1);
+    });
+    
+    // 注：播放间隔和循环设置在 renderPageOrchestration 中处理，这里不需要重复设置
+    
+    // 页面列表拖拽
+    const pageList = document.getElementById('pageList');
+    console.log('[bindPageOrchestrationEvents] pageList:', !!pageList, 'items:', pageList?.querySelectorAll('.page-item').length);
+    if (pageList) {
+        pageList.querySelectorAll('.page-item').forEach((item, idx) => {
+            // 点击切换页面
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.page-drag-handle')) {
+                    const index = parseInt(item.dataset.index);
+                    goToPage(index);
+                }
+            });
+            
+            // 拖拽开始
+            item.addEventListener('dragstart', (e) => {
+                console.log('[dragstart] item index:', item.dataset.index);
+                draggedPageIndex = parseInt(item.dataset.index);
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            
+            // 拖拽结束
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                draggedPageIndex = null;
+                // 重新渲染以刷新页面编号
+                renderPageOrchestration();
+            });
+            
+            // 拖拽经过
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                if (draggedPageIndex === null) return;
+                
+                const targetIndex = parseInt(item.dataset.index);
+                if (draggedPageIndex !== targetIndex) {
+                    item.classList.add('drag-over');
+                }
+            });
+            
+            // 离开拖拽区域
+            item.addEventListener('dragleave', () => {
+                item.classList.remove('drag-over');
+            });
+            
+            // 放置
+            item.addEventListener('drop', (e) => {
+                console.log('[drop] on item index:', item.dataset.index, 'draggedPageIndex:', draggedPageIndex);
+                e.preventDefault();
+                item.classList.remove('drag-over');
+                
+                if (draggedPageIndex === null) {
+                    console.log('[drop] draggedPageIndex is null, returning');
+                    return;
+                }
+                
+                const targetIndex = parseInt(item.dataset.index);
+                if (draggedPageIndex !== targetIndex) {
+                    console.log('[drop] reordering from', draggedPageIndex, 'to', targetIndex);
+                    reorderPages(draggedPageIndex, targetIndex);
+                }
+            });
+        });
+    }
+}
+
+/**
+ * 重新排序页面（原型）
+ */
+function reorderPages(fromIndex, toIndex) {
+    const prototypes = MockCraftState.prototypes;
+    const [movedProto] = prototypes.splice(fromIndex, 1);
+    prototypes.splice(toIndex, 0, movedProto);
+    
+    // 同步更新页面列表
+    MockCraftState.pages = prototypes.map((proto, index) => ({
+        id: proto.id,
+        name: proto.name,
+        type: 'prototype',
+        protoIndex: index
+    }));
+    
+    // 更新当前页面索引
+    if (MockCraftState.currentPageIndex === fromIndex) {
+        MockCraftState.currentPageIndex = toIndex;
+    } else if (fromIndex < MockCraftState.currentPageIndex && toIndex >= MockCraftState.currentPageIndex) {
+        MockCraftState.currentPageIndex--;
+    } else if (fromIndex > MockCraftState.currentPageIndex && toIndex <= MockCraftState.currentPageIndex) {
+        MockCraftState.currentPageIndex++;
+    }
+    
+    renderPageOrchestration();
+    renderPrototypeList(); // 同步更新左侧原型列表
+    showToast(`已移动到位置 ${toIndex + 1}`);
+}
+
+/**
+ * 切换播放/暂停
+ */
+function togglePlayback() {
+    console.log('[togglePlayback] called, current isPlaying:', MockCraftState.isPlaying, 'pages:', MockCraftState.pages.length);
+    if (MockCraftState.isPlaying) {
+        stopPlayback();
+    } else {
+        startPlayback();
+    }
+}
+
+/**
+ * 开始播放
+ */
+function startPlayback() {
+    console.log('[startPlayback] called, pages:', MockCraftState.pages.length);
+    if (MockCraftState.pages.length === 0) {
+        console.log('[startPlayback] no pages, returning');
+        return;
+    }
+    
+    MockCraftState.isPlaying = true;
+    console.log('[startPlayback] set isPlaying to true, re-rendering');
+    renderPageOrchestration();
+    
+    const interval = parseInt(document.getElementById('playIntervalInput')?.value || '2');
+    const loop = document.getElementById('loopPlayback')?.checked ?? false;
+    
+    // 立即切换到当前页面
+    updatePreviewForCurrentPage();
+    
+    MockCraftState.playInterval = setInterval(() => {
+        let nextIndex = MockCraftState.currentPageIndex + 1;
+        
+        if (nextIndex >= MockCraftState.pages.length) {
+            if (loop) {
+                nextIndex = 0;
+            } else {
+                stopPlayback();
+                return;
+            }
+        }
+        
+        goToPage(nextIndex);
+    }, interval * 1000);
+    
+    showToast('开始播放');
+}
+
+/**
+ * 停止播放
+ */
+function stopPlayback() {
+    MockCraftState.isPlaying = false;
+    if (MockCraftState.playInterval) {
+        clearInterval(MockCraftState.playInterval);
+        MockCraftState.playInterval = null;
+    }
+    renderPageOrchestration();
+    showToast('已暂停');
+}
+
+/**
+ * 导航到指定页面（切换原型）
+ */
+function goToPage(index) {
+    if (index < 0 || index >= MockCraftState.pages.length) return;
+    
+    const page = MockCraftState.pages[index];
+    if (!page) return;
+    
+    console.log('[goToPage] navigating to page:', index, 'proto:', page.name);
+    
+    MockCraftState.currentPageIndex = index;
+    
+    // 如果切换到不同的原型，加载该原型
+    if (MockCraftState.currentPrototype?.id !== page.id) {
+        selectPrototype(page.id);
+    } else {
+        // 同一个原型，只更新显示
+        renderPageOrchestration();
+    }
+}
+
+/**
+ * 相对导航
+ */
+function navigatePage(delta) {
+    const newIndex = MockCraftState.currentPageIndex + delta;
+    if (newIndex >= 0 && newIndex < MockCraftState.pages.length) {
+        goToPage(newIndex);
+    }
+}
+
+/**
+ * 根据当前页面更新预览
+ */
+function updatePreviewForCurrentPage() {
+    if (!MockCraftState.currentPrototype) return;
+    
+    const page = MockCraftState.pages[MockCraftState.currentPageIndex];
+    if (!page) return;
+    
+    // 通过 postMessage 通知 iframe 切换页面
+    const iframe = document.getElementById('mockcraftPreviewFrame');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+            type: 'mockcraft_goto_page',
+            pageId: page.id,
+            pageIndex: MockCraftState.currentPageIndex
+        }, '*');
+    }
+    
+    // 同时更新状态
+    MockCraftState.currentState = {
+        ...MockCraftState.currentState,
+        currentPage: page.id,
+        currentPageIndex: MockCraftState.currentPageIndex
+    };
+}
+
+/**
+ * 加载原型时初始化页面
+ */
+/**
+ * 初始化页面编排 - 把所有原型作为页面
+ */
+function initPagesForPrototype(prototype) {
+    console.log('[initPagesForPrototype] prototype:', prototype?.name, 'total prototypes:', MockCraftState.prototypes.length);
+    
+    // 将所有原型转换为页面列表
+    const pages = MockCraftState.prototypes.map((proto, index) => ({
+        id: proto.id,
+        name: proto.name,
+        type: 'prototype',
+        protoIndex: index
+    }));
+    
+    console.log('[initPagesForPrototype] created pages from prototypes:', pages.length);
+    
+    MockCraftState.pages = pages;
+    MockCraftState.currentPageIndex = pages.findIndex(p => p.id === prototype?.id) || 0;
+    MockCraftState.isPlaying = false;
+    if (MockCraftState.playInterval) {
+        clearInterval(MockCraftState.playInterval);
+        MockCraftState.playInterval = null;
+    }
+}
+
 // ============== Export for Global Access ==============
+
+// 显示重命名对话框
+function showRenameDialog() {
+    const proto = MockCraftState.currentPrototype;
+    if (!proto) return;
+    
+    const newName = prompt('重命名原型:', proto.name);
+    if (newName && newName.trim() && newName.trim() !== proto.name) {
+        renamePrototype(proto.id, newName.trim());
+    }
+}
+
+// 显示删除对话框
+function showDeleteDialog() {
+    const proto = MockCraftState.currentPrototype;
+    if (!proto) return;
+    
+    if (confirm(`确定要删除原型 "${proto.name}" 吗？`)) {
+        deletePrototype(proto.id);
+    }
+}
 
 window.MockCraft = {
     state: MockCraftState,
@@ -1120,5 +1861,15 @@ window.MockCraft = {
     deletePrototype,
     selectPrototype,
     createPrototypeFromChat,
-    checkForPrototypeCommand
+    checkForPrototypeCommand,
+    // 页面编排API
+    parsePagesFromHtml,
+    renderPageOrchestration,
+    goToPage,
+    togglePlayback,
+    stopPlayback,
+    openMockCraftPanel,
+    showRenameDialog,
+    showDeleteDialog
 };
+}
