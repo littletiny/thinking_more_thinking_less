@@ -357,7 +357,81 @@ function renderPrototypeList() {
         return;
     }
     
-    // 注：重命名功能现在通过页面编排面板的操作按钮处理
+    // 如果正在重命名原型，显示内联表单
+    if (renamingPrototypeId) {
+        const proto = MockCraftState.prototypes.find(p => p.id === renamingPrototypeId);
+        if (proto) {
+            listEl.innerHTML = MockCraftState.prototypes.map(p => {
+                if (p.id === renamingPrototypeId) {
+                    return `
+                        <div class="prototype-item-wrapper" data-id="${p.id}">
+                            <div class="prototype-item editing">
+                                <input type="text" id="renamePrototypeInput" value="${escapeHtml(p.name)}" maxlength="50" autofocus>
+                            </div>
+                            <div class="prototype-edit-btns">
+                                <button class="prototype-edit-btn save" id="saveRenameBtn">保存</button>
+                                <button class="prototype-edit-btn cancel" id="cancelRenameBtn">取消</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="prototype-item ${MockCraftState.currentPrototype?.id === p.id ? 'active' : ''}" 
+                         data-id="${p.id}">
+                        <span class="name">${escapeHtml(p.name)}</span>
+                        <button class="prototype-menu-btn" data-proto-id="${p.id}" title="操作">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="6" r="1"/>
+                                <circle cx="12" cy="12" r="1"/>
+                                <circle cx="12" cy="18" r="1"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            
+            // 绑定重命名事件
+            const input = document.getElementById('renamePrototypeInput');
+            const saveBtn = document.getElementById('saveRenameBtn');
+            const cancelBtn = document.getElementById('cancelRenameBtn');
+            
+            if (input) {
+                input.focus();
+                input.select();
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') confirmRenamePrototype(renamingPrototypeId, input.value);
+                    if (e.key === 'Escape') cancelRenamePrototype();
+                });
+            }
+            
+            saveBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                confirmRenamePrototype(renamingPrototypeId, input?.value || '');
+            });
+            cancelBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                cancelRenamePrototype();
+            });
+            
+            // 绑定其他原型项的点击事件
+            listEl.querySelectorAll('.prototype-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.prototype-menu-btn')) return;
+                    selectPrototype(item.dataset.id);
+                });
+            });
+            
+            // 绑定菜单按钮事件
+            listEl.querySelectorAll('.prototype-menu-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePrototypeMenuForItem(btn.dataset.protoId, btn);
+                });
+            });
+            
+            return;
+        }
+    }
     
     console.log('[renderPrototypeList] prototypes count:', MockCraftState.prototypes.length);
     if (MockCraftState.prototypes.length === 0) {
@@ -820,6 +894,18 @@ function togglePrototypeMenuForItem(protoId, btnElement) {
             handlePrototypeMenuAction(item.dataset.action, protoId);
         });
     });
+    
+    // 延迟添加点击外部关闭监听，避免立即触发
+    setTimeout(() => {
+        document.addEventListener('click', handleClickOutsidePrototypeMenu, { once: true });
+    }, 0);
+}
+
+// 点击外部关闭原型菜单的处理函数
+function handleClickOutsidePrototypeMenu(e) {
+    if (currentPrototypeMenu && !currentPrototypeMenu.contains(e.target)) {
+        closePrototypeMenu();
+    }
 }
 
 function closePrototypeMenu() {
@@ -829,6 +915,7 @@ function closePrototypeMenu() {
     }
     currentMenuProtoId = null;
     prototypeMenuVisible = false;
+    document.removeEventListener('click', handleClickOutsidePrototypeMenu);
 }
 
 function handlePrototypeMenuAction(action, protoId) {
