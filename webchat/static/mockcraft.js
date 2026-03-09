@@ -1801,20 +1801,12 @@ function bindPageOrchestrationEvents() {
 }
 
 /**
- * 重新排序页面（原型）
+ * 重新排序页面编排中的页面
  */
 function reorderPages(fromIndex, toIndex) {
-    const prototypes = MockCraftState.prototypes;
-    const [movedProto] = prototypes.splice(fromIndex, 1);
-    prototypes.splice(toIndex, 0, movedProto);
-    
-    // 同步更新页面列表
-    MockCraftState.pages = prototypes.map((proto, index) => ({
-        id: proto.id,
-        name: proto.name,
-        type: 'prototype',
-        protoIndex: index
-    }));
+    const pages = MockCraftState.pages;
+    const [movedPage] = pages.splice(fromIndex, 1);
+    pages.splice(toIndex, 0, movedPage);
     
     // 更新当前页面索引
     if (MockCraftState.currentPageIndex === fromIndex) {
@@ -1826,7 +1818,6 @@ function reorderPages(fromIndex, toIndex) {
     }
     
     renderPageOrchestration();
-    renderPrototypeList(); // 同步更新左侧原型列表
     showToast(`已移动到位置 ${toIndex + 1}`);
 }
 
