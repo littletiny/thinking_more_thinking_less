@@ -1220,6 +1220,57 @@
             margin-left: 8px;
         }
         
+        .prototype-item.editing {
+            padding: 4px 6px;
+            flex: 1;
+        }
+        
+        .prototype-item.editing input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+        
+        .prototype-item.editing input:focus {
+            border-color: var(--primary);
+        }
+        
+        .prototype-edit-btns {
+            display: flex;
+            gap: 4px;
+            margin-left: 4px;
+        }
+        
+        .prototype-edit-btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        
+        .prototype-edit-btn.save {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .prototype-edit-btn.save:hover {
+            background: var(--primary-hover);
+        }
+        
+        .prototype-edit-btn.cancel {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+        
+        .prototype-edit-btn.cancel:hover {
+            background: var(--border);
+        }
+        
         .prototype-placeholder {
             text-align: center;
             padding: 20px;

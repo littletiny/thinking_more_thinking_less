@@ -18,6 +18,7 @@ const MockCraftState = {
 };
 
 let prototypeMenuVisible = false;  // 菜单显示状态
+let isCreatingPrototype = false;   // 正在新建原型状态
 
 // ============== Utils ==============
 
@@ -225,6 +226,42 @@ async function updatePrototypeState(protoId, stateUpdate) {
 function renderPrototypeList() {
     const listEl = document.getElementById('prototypeList');
     
+    // 如果正在新建原型，显示内联表单
+    if (isCreatingPrototype) {
+        listEl.innerHTML = `
+            <div class="prototype-item-wrapper">
+                <div class="prototype-item editing">
+                    <input type="text" id="newPrototypeNameInput" placeholder="输入原型名称" maxlength="50" autofocus>
+                </div>
+                <div class="prototype-edit-btns">
+                    <button class="prototype-edit-btn save" id="saveNewPrototypeBtn">保存</button>
+                    <button class="prototype-edit-btn cancel" id="cancelNewPrototypeBtn">取消</button>
+                </div>
+            </div>
+        `;
+        
+        // 绑定事件
+        const input = document.getElementById('newPrototypeNameInput');
+        const saveBtn = document.getElementById('saveNewPrototypeBtn');
+        const cancelBtn = document.getElementById('cancelNewPrototypeBtn');
+        
+        if (input) {
+            input.focus();
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') confirmCreatePrototype(input.value);
+                if (e.key === 'Escape') cancelCreatePrototype();
+            });
+        }
+        
+        saveBtn?.addEventListener('click', () => confirmCreatePrototype(input?.value || ''));
+        cancelBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cancelCreatePrototype();
+        });
+        
+        return;
+    }
+    
     if (MockCraftState.prototypes.length === 0) {
         listEl.innerHTML = `
             <div class="prototype-placeholder">
@@ -374,24 +411,8 @@ function initMockCraft() {
     
     // 新建原型按钮
     document.getElementById('newPrototypeBtn')?.addEventListener('click', () => {
-        const name = prompt('原型名称:');
-        if (!name) return;
-        
-        const html = `<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: system-ui; padding: 20px; }
-        h1 { color: #333; }
-    </style>
-</head>
-<body>
-    <h1>${escapeHtml(name)}</h1>
-    <p>开始编辑你的原型...</p>
-</body>
-</html>`;
-        
-        createPrototype(name, html);
+        isCreatingPrototype = true;
+        renderPrototypeList();
     });
     
     // 生成原型按钮
@@ -523,13 +544,45 @@ function handlePrototypeMenuAction(action, protoId) {
     }
 }
 
+async function confirmCreatePrototype(name) {
+    name = name.trim();
+    if (!name) {
+        cancelCreatePrototype();
+        return;
+    }
+    
+    isCreatingPrototype = false;
+    
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: system-ui; padding: 20px; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>${escapeHtml(name)}</h1>
+    <p>开始编辑你的原型...</p>
+</body>
+</html>`;
+    
+    try {
+        await createPrototype(name, html);
+    } catch (err) {
+        showToast(`创建失败: ${err.message}`);
+    }
+}
+
+function cancelCreatePrototype() {
+    isCreatingPrototype = false;
+    renderPrototypeList();
+}
+
 function showRenamePrototypeDialog(proto) {
     if (!proto) return;
     
-    // 去掉 http:// 或 https:// 前缀用于显示和默认值
-    const displayName = stripUrlPrefix(proto.name);
-    
-    const newName = prompt('重命名原型:', displayName);
+    const newName = prompt('重命名原型:', proto.name);
     if (!newName || newName === proto.name) return;
     
     updatePrototype(proto.id, { name: newName.trim() })
