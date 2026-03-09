@@ -376,14 +376,31 @@ function renderPrototypeList() {
         <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
              data-id="${proto.id}">
             <span class="name">${escapeHtml(proto.name)}</span>
+            <button class="prototype-menu-btn" data-proto-id="${proto.id}" title="操作">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="6" r="1"/>
+                    <circle cx="12" cy="12" r="1"/>
+                    <circle cx="12" cy="18" r="1"/>
+                </svg>
+            </button>
         </div>
     `).join('');
     console.log('[renderPrototypeList] rendered');
     
     // 添加点击事件 - 选中后自动打开操作面板
     listEl.querySelectorAll('.prototype-item').forEach(item => {
-        item.addEventListener('click', () => {
+        item.addEventListener('click', (e) => {
+            // 如果点击的是菜单按钮，不触发选中
+            if (e.target.closest('.prototype-menu-btn')) return;
             selectPrototype(item.dataset.id);
+        });
+    });
+    
+    // 添加菜单按钮点击事件
+    listEl.querySelectorAll('.prototype-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePrototypeMenuForItem(btn.dataset.protoId, btn);
         });
     });
 }

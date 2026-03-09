@@ -1205,6 +1205,36 @@
             text-overflow: ellipsis;
         }
         
+        .prototype-item .prototype-menu-btn {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            color: var(--text-secondary);
+            transition: opacity 0.15s, background 0.15s;
+            padding: 0;
+            margin-left: 4px;
+        }
+        
+        .prototype-item:hover .prototype-menu-btn {
+            opacity: 1;
+        }
+        
+        .prototype-item .prototype-menu-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .prototype-item.active .prototype-menu-btn {
+            color: var(--primary);
+        }
+        
         .prototype-item .version {
             font-size: 11px;
             color: var(--text-secondary);
