@@ -18,6 +18,7 @@ let eventSource = null;
 let menuSessionId = null;      // 当前显示菜单的 session
 let renamingSessionId = null;  // 当前正在重命名的 session
 let confirmCallback = null;    // 确认弹窗的回调
+let attachedImages = [];       // 粘贴的图片数组 {id, dataUrl, mimeType}
 
 // Theme definitions
 const CODE_THEMES = [
@@ -49,6 +50,7 @@ const elements = {
     sendBtn: document.getElementById('sendBtn'),
     inputStatus: document.getElementById('inputStatus'),
     toast: document.getElementById('toast'),
+    imageAttachments: document.getElementById('imageAttachments'),
     // Confirm dialog
     confirmOverlay: document.getElementById('confirmOverlay'),
     confirmTitle: document.getElementById('confirmTitle'),
@@ -774,6 +776,33 @@ function fallbackCopyTextToClipboard(text) {
     }
 }
 
+function renderUserContent(content) {
+    // 渲染用户消息内容，支持多模态（文本 + 图片）
+    // content 可以是字符串或包含图片标记的字符串
+    if (!content) return '<div class="message-block markdown"></div>';
+    
+    // 检查是否包含图片标记 [N image(s)]
+    const imageMatch = content.match(/\[(\d+) image(s?)\]$/);
+    if (imageMatch) {
+        // 分离文本和图片标记
+        const textPart = content.substring(0, content.length - imageMatch[0].length).trim();
+        const imageCount = parseInt(imageMatch[1]);
+        
+        let html = '';
+        if (textPart) {
+            html += `<div class="message-block markdown">${renderMarkdown(textPart)}</div>`;
+        }
+        
+        // 添加图片占位符（实际图片在服务器端处理）
+        html += `<div class="user-images-placeholder" style="margin-top: 8px; color: var(--text-secondary); font-size: 13px;">📷 ${imageCount} image${imageCount > 1 ? 's' : ''} attached</div>`;
+        
+        return html;
+    }
+    
+    // 纯文本
+    return `<div class="message-block markdown">${renderMarkdown(content)}</div>`;
+}
+
 function addMessage(role, content, isStreaming = false) {
     // Remove empty state if exists
     if (elements.messages.querySelector('.empty-state')) {
@@ -800,7 +829,8 @@ function addMessage(role, content, isStreaming = false) {
             const blocks = parseContentToBlocks(content);
             html += renderMessageContent(blocks, false);
         } else {
-            html += `<div class="message-block markdown">${renderMarkdown(content)}</div>`;
+            // 用户消息使用多模态渲染
+            html += renderUserContent(content);
         }
         
         // Add copy button for non-streaming messages
@@ -1206,8 +1236,12 @@ function finalizeStreamingMessage() {
 async function sendMessage() {
     if (isStreaming) return;
     
-    const message = elements.messageInput.value.trim();
-    if (!message) return;
+    // 构建消息内容（支持多模态）
+    const messageContent = buildMessageContent();
+    
+    // 检查是否有内容
+    const hasText = typeof messageContent === 'string' ? messageContent.trim() : messageContent.length > 0;
+    if (!hasText) return;
     
     if (!currentSession) {
         showToast('Please select or create a session first', 'warning');
@@ -1227,12 +1261,32 @@ async function sendMessage() {
         }
     }
     
-    // Clear input
+    // Clear input and images
     elements.messageInput.value = '';
     elements.messageInput.style.height = 'auto';
     
+    // 准备显示的消息（简化版本用于本地显示）
+    let displayMessage;
+    if (typeof messageContent === 'string') {
+        displayMessage = messageContent;
+    } else {
+        // 构建显示文本
+        const texts = [];
+        const imageCount = messageContent.filter(p => p.type === 'image_url').length;
+        messageContent.forEach(p => {
+            if (p.type === 'text') texts.push(p.text);
+        });
+        displayMessage = texts.join(' ');
+        if (imageCount > 0) {
+            displayMessage += (displayMessage ? '\n' : '') + `[${imageCount} image${imageCount > 1 ? 's' : ''}]`;
+        }
+    }
+    
+    // Clear attached images after building display message
+    clearAttachedImages();
+    
     // Add user message
-    addMessage('user', message);
+    addMessage('user', displayMessage);
     
     // Add placeholder for assistant
     addMessage('assistant', '', true);
@@ -1242,7 +1296,7 @@ async function sendMessage() {
     updateInputStatus();
     
     try {
-        await streamChat(message);
+        await streamChat(messageContent);
     } catch (err) {
         appendStreamingChunk(`Error: ${err.message}`, 'output');
         finalizeStreamingMessage();
@@ -1264,7 +1318,7 @@ async function streamChat(message) {
         fetch(`${API_BASE}/api/sessions/${sessionId}/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({ message }),  // message 可以是字符串或数组
         }).then(response => {
             if (!response.ok) {
                 reject(new Error(`HTTP ${response.status}`));
@@ -1429,7 +1483,9 @@ function showToast(message) {
 }
 
 function updateSendButton() {
-    elements.sendBtn.disabled = !elements.messageInput.value.trim() || isStreaming;
+    const hasText = elements.messageInput.value.trim().length > 0;
+    const hasImages = attachedImages.length > 0;
+    elements.sendBtn.disabled = (!hasText && !hasImages) || isStreaming;
 }
 
 function updateInputStatus() {
@@ -1701,6 +1757,93 @@ function hideThemeDialog() {
     elements.themeOverlay.classList.remove('open');
 }
 
+// ============== Image Paste Handling ==============
+
+function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    let hasImage = false;
+    
+    for (const item of items) {
+        if (item.type.startsWith('image/')) {
+            hasImage = true;
+            e.preventDefault();
+            
+            const blob = item.getAsFile();
+            if (blob) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const dataUrl = event.target.result;
+                    addAttachedImage(dataUrl, item.type);
+                };
+                reader.readAsDataURL(blob);
+            }
+        }
+    }
+    
+    // 如果没有图片，让默认粘贴行为继续（粘贴文本）
+}
+
+function addAttachedImage(dataUrl, mimeType) {
+    const id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    attachedImages.push({ id, dataUrl, mimeType });
+    renderImageAttachments();
+    updateSendButton();
+}
+
+function removeAttachedImage(id) {
+    attachedImages = attachedImages.filter(img => img.id !== id);
+    renderImageAttachments();
+    updateSendButton();
+}
+
+function renderImageAttachments() {
+    if (attachedImages.length === 0) {
+        elements.imageAttachments.innerHTML = '';
+        return;
+    }
+    
+    elements.imageAttachments.innerHTML = attachedImages.map(img => `
+        <div class="image-preview" data-id="${img.id}">
+            <img src="${img.dataUrl}" alt="Attached image">
+            <button class="remove-btn" onclick="removeAttachedImage('${img.id}')">×</button>
+        </div>
+    `).join('');
+}
+
+function clearAttachedImages() {
+    attachedImages = [];
+    renderImageAttachments();
+}
+
+function buildMessageContent() {
+    // 构建消息内容，支持多模态
+    // 返回: 字符串 或 内容部件数组
+    const text = elements.messageInput.value.trim();
+    
+    if (attachedImages.length === 0) {
+        // 只有文本
+        return text;
+    }
+    
+    // 构建多模态内容
+    const content = [];
+    
+    if (text) {
+        content.push({ type: 'text', text });
+    }
+    
+    attachedImages.forEach(img => {
+        content.push({
+            type: 'image_url',
+            image_url: { url: img.dataUrl }
+        });
+    });
+    
+    return content;
+}
+
 // ============== Init ==============
 
 async function init() {
@@ -1717,6 +1860,9 @@ async function init() {
     // Initialize theme and tools toggle
     initTheme();
     initToolsToggle();
+    
+    // Setup paste handling
+    elements.messageInput.addEventListener('paste', handlePaste);
     
     await loadSessions();
     

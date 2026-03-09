@@ -423,7 +423,7 @@ class WebSession(BaseSession):
     
     async def _send_message_async(
         self, 
-        message: str, 
+        message: str | list[dict], 
         chunk_callback: Callable[[str], None],
         thinking_callback: Optional[Callable[[str], None]] = None,
         event_callback: Optional[Callable[[dict], None]] = None
@@ -431,31 +431,57 @@ class WebSession(BaseSession):
         """
         内部异步发送消息
         
+        Args:
+            message: 字符串或内容部件列表
+        
         Returns:
             {"thinking": str|None, "output": str, "has_thinking": bool, "events": list}
         """
         await self._initialize()
         
-        # 记录用户消息
-        self._append_to_file("User", message)
+        # 处理消息内容
+        if isinstance(message, str):
+            content_parts = [{"type": "text", "text": message}]
+            display_message = message
+        else:
+            content_parts = message
+            # 提取文本用于文件记录
+            display_message = " ".join([
+                p["text"] if p["type"] == "text" else "[图片]"
+                for p in content_parts
+            ])
+        
+        # 记录用户消息（简化版本）
+        self._append_to_file("User", display_message)
         
         if MOCK_MODE:
             # Mock 模式：模拟带有 thinking 和历史记忆的响应
             
+            # 提取文本用于历史记录
+            if isinstance(message, list):
+                text_parts = [p["text"] for p in message if p["type"] == "text"]
+                message_text = " ".join(text_parts)
+                has_image = any(p["type"] == "image_url" for p in message)
+            else:
+                message_text = message
+                has_image = False
+            
             # 添加到历史
-            self._mock_history.append({"role": "user", "content": message})
+            self._mock_history.append({"role": "user", "content": message_text})
             
             # 根据历史生成响应
             history_len = len(self._mock_history)
-            mock_thinking = f"<think>\n这是第 {history_len//2 + 1} 轮对话\n用户消息: {message[:30]}...\n历史消息数: {history_len}\n</think>\n\n"
+            mock_thinking = f"<think>\n这是第 {history_len//2 + 1} 轮对话\n用户消息: {message_text[:30]}...\n历史消息数: {history_len}\n</think>\n\n"
             
             # 生成带有历史信息的响应
-            if history_len == 1:
-                mock_output = f"你好！我是模拟助手。你说的是：'{message[:30]}...'"
-            elif "记住" in message or "历史" in message:
+            if has_image:
+                mock_output = "我看到你发送了一张图片。作为模拟助手，我无法真正识别图片内容，但我会假装能看到它！"
+            elif history_len == 1:
+                mock_output = f"你好！我是模拟助手。你说的是：'{message_text[:30]}...'"
+            elif "记住" in message_text or "历史" in message_text:
                 mock_output = f"我记得我们的对话历史，目前有 {history_len//2} 轮对话。"
             else:
-                mock_output = f"收到（第 {history_len//2 + 1} 轮）: '{message[:30]}...'"
+                mock_output = f"收到（第 {history_len//2 + 1} 轮）: '{message_text[:30]}...'"
             
             # 流式输出 thinking（如果回调存在）
             if thinking_callback:
@@ -493,12 +519,38 @@ class WebSession(BaseSession):
         # 清空客户端状态
         self._client.clear()
         
+        # 构建 ACP 内容块
+        if isinstance(message, list):
+            # 多模态输入
+            prompt_blocks = []
+            for part in message:
+                if part["type"] == "text":
+                    prompt_blocks.append(text_block(part["text"]))
+                elif part["type"] == "image_url":
+                    url = part["image_url"]["url"]
+                    if url.startswith("data:"):
+                        # 解析 data URI
+                        try:
+                            mime_part, b64_data = url.split(",", 1)
+                            mime_type = mime_part.split(";")[0].replace("data:", "") or "image/png"
+                            prompt_blocks.append(acp.schema.ImageContentBlock(
+                                type="image",
+                                mime_type=mime_type,
+                                data=b64_data
+                            ))
+                        except Exception as e:
+                            logger.warning(f"[{self.id}] Failed to parse image data URI: {e}")
+            if not prompt_blocks:
+                prompt_blocks = [text_block("")]
+        else:
+            prompt_blocks = [text_block(message)]
+        
         # 发送消息
-        logger.debug(f"[{self.id}] Sending prompt to ACP...")
+        logger.debug(f"[{self.id}] Sending prompt to ACP with {len(prompt_blocks)} block(s)...")
         response_task = asyncio.create_task(
             self._conn.prompt(
                 session_id=self._session_id,
-                prompt=[text_block(message)],
+                prompt=prompt_blocks,
             )
         )
         logger.debug(f"[{self.id}] Prompt task created")
@@ -598,7 +650,7 @@ class WebSession(BaseSession):
     
     def send_message_sync(
         self, 
-        message: str, 
+        message: str | list[dict], 
         chunk_callback: Callable[[str], None],
         thinking_callback: Optional[Callable[[str], None]] = None,
         event_callback: Optional[Callable[[dict], None]] = None
@@ -607,12 +659,22 @@ class WebSession(BaseSession):
         同步接口：在 session 的专用 event loop 中执行发送
         使用锁确保同一个 session 的消息顺序处理
         
+        Args:
+            message: 字符串或内容部件列表（支持多模态）
+        
         Returns:
             {"thinking": str|None, "output": str, "has_thinking": bool, "events": list}
         """
         # 获取处理锁，阻塞等待前一个消息完成
         with self._processing_lock:
-            logger.info(f"[{self.id}] send_message_sync: {message[:50]}...")
+            if isinstance(message, str):
+                log_preview = message[:50]
+            else:
+                text_parts = [p["text"] for p in message if p["type"] == "text"]
+                img_count = sum(1 for p in message if p["type"] == "image_url")
+                preview = " ".join(text_parts)[:50] if text_parts else ""
+                log_preview = f"{preview} (+{img_count} images)"
+            logger.info(f"[{self.id}] send_message_sync: {log_preview}...")
             
             async def do_send():
                 return await self._send_message_async(message, chunk_callback, thinking_callback, event_callback)
@@ -1375,6 +1437,80 @@ def get_messages(session_id):
     return jsonify({"messages": messages})
 
 
+def _parse_message_content(message_data) -> list:
+    """
+    解析前端发送的消息内容
+    支持:
+    - 字符串: "hello"
+    - 数组: [{"type": "text", "text": "..."}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}]
+    """
+    if not message_data:
+        return []
+    
+    if isinstance(message_data, str):
+        if not message_data.strip():
+            return []
+        return [{"type": "text", "text": message_data.strip()}]
+    
+    if isinstance(message_data, list):
+        parts = []
+        for item in message_data:
+            if isinstance(item, dict):
+                part_type = item.get("type", "")
+                if part_type == "text" and item.get("text", "").strip():
+                    parts.append({"type": "text", "text": item["text"]})
+                elif part_type == "image_url" and item.get("image_url", {}).get("url"):
+                    parts.append({
+                        "type": "image_url",
+                        "image_url": {"url": item["image_url"]["url"]}
+                    })
+        return parts
+    
+    return []
+
+
+def _extract_text_from_content(content_parts: list) -> str:
+    """从内容部件中提取纯文本（用于记录到文件）"""
+    texts = []
+    for part in content_parts:
+        if part.get("type") == "text":
+            texts.append(part["text"])
+        elif part.get("type") == "image_url":
+            texts.append("[图片]")
+    return " ".join(texts) if texts else ""
+
+
+def _convert_to_acp_content_blocks(content_parts: list) -> list:
+    """
+    将前端内容部件转换为 ACP ContentBlock 格式
+    用于发送到 ACP 服务器
+    """
+    blocks = []
+    for part in content_parts:
+        part_type = part.get("type")
+        if part_type == "text":
+            blocks.append({"type": "text", "text": part["text"]})
+        elif part_type == "image_url":
+            url = part.get("image_url", {}).get("url", "")
+            # 解析 data URI: data:image/png;base64,xxx
+            if url.startswith("data:"):
+                try:
+                    # data:image/png;base64,xxx 格式
+                    mime_part, b64_data = url.split(",", 1)
+                    mime_type = mime_part.split(";")[0].replace("data:", "") or "image/png"
+                    blocks.append({
+                        "type": "image",
+                        "mime_type": mime_type,
+                        "data": b64_data
+                    })
+                except Exception as e:
+                    logger.warning(f"Failed to parse image data URI: {e}")
+            else:
+                # 普通 URL
+                blocks.append({"type": "image", "mime_type": "image/png", "data": url})
+    return blocks
+
+
 def parse_conversation_messages(content: str) -> list:
     messages = []
     lines = content.split('\n')
@@ -1450,6 +1586,10 @@ def chat(session_id):
     
     使用 session 的专用 event loop 处理，避免跨线程问题
     支持的事件类型: thinking, chunk, event (tool_call, step_begin, tool_result, etc.), done, error
+    
+    支持多模态输入:
+    - 纯文本: {"message": "hello"}
+    - 带图片: {"message": [{"type": "text", "text": "hello"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}]}
     """
     logger.info(f"API: chat {session_id}")
     
@@ -1460,10 +1600,15 @@ def chat(session_id):
     session_manager.touch_session(session_id)
     
     data = request.get_json(force=True, silent=True) or {}
-    message = data.get("message", "").strip()
+    message_data = data.get("message", "")
     
-    if not message:
+    # 解析消息内容（支持字符串或数组）
+    content_parts = _parse_message_content(message_data)
+    if not content_parts:
         return jsonify({"error": "Message required"}), 400
+    
+    # 提取文本用于显示
+    text_content = _extract_text_from_content(content_parts)
     
     def generate():
         """SSE 生成器 - 使用同步接口，支持 thinking 和事件"""
@@ -1488,7 +1633,8 @@ def chat(session_id):
         
         def do_send():
             try:
-                result = session.send_message_sync(message, chunk_callback, thinking_callback, event_callback)
+                # 传递多模态内容
+                result = session.send_message_sync(content_parts, chunk_callback, thinking_callback, event_callback)
                 result_holder[0] = result
             except Exception as e:
                 logger.exception(f"[{session_id}] Error in send")

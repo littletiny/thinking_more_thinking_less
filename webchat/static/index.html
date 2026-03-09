@@ -906,6 +906,58 @@
             position: relative;
         }
         
+        /* Image attachments preview */
+        .image-attachments {
+            max-width: 800px;
+            margin: 0 auto 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .image-preview {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-preview .remove-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .image-preview:hover .remove-btn {
+            opacity: 1;
+        }
+        
+        .image-preview .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.8);
+        }
+        
         .message-input {
             width: 100%;
             min-height: 52px;
@@ -1384,11 +1436,13 @@
             
             <div class="input-area">
                 <div class="input-status" id="inputStatus"></div>
+                <!-- Image attachments preview -->
+                <div class="image-attachments" id="imageAttachments"></div>
                 <div class="input-container">
                     <textarea 
                         class="message-input" 
                         id="messageInput" 
-                        placeholder="Message..."
+                        placeholder="Message... (Paste image to attach)"
                         rows="1"
                     ></textarea>
                     <button class="send-btn" id="sendBtn" disabled>
@@ -1396,7 +1450,7 @@
                     </button>
                 </div>
                 <div class="input-footer">
-                    Cmd/Ctrl + Enter to send, Enter for new line
+                    Cmd/Ctrl + Enter to send, Enter for new line · Paste/Ctrl+V to attach image
                 </div>
             </div>
         </main>
