@@ -1338,16 +1338,49 @@
             margin-top: 4px;
         }
         
+        /* Main content area: sidebar + preview */
+        .mockcraft-main-content {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        .mockcraft-sidebar {
+            width: 180px;
+            min-width: 180px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .mockcraft-sidebar .mockcraft-section-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        
+        .mockcraft-sidebar .prototype-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .mockcraft-preview-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+        
         .mockcraft-preview-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-height: 0;
             padding: 0;
-        }
-        
-        .mockcraft-preview-section .mockcraft-section-header {
-            padding: 12px;
             border-bottom: 1px solid var(--border);
         }
         
@@ -1412,8 +1445,14 @@
             background: white;
         }
         
+        .mockcraft-orchestration-section {
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            flex-shrink: 0;
+        }
+        
         .interaction-controls {
-            padding: 8px 0;
+            padding: 0;
         }
         
         .interaction-control {
@@ -1448,7 +1487,8 @@
         /* Page Orchestration Styles */
         .page-orchestration {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            align-items: center;
             gap: 12px;
         }
         
@@ -1456,10 +1496,12 @@
         .playback-controls {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px;
-            background: var(--bg-secondary);
-            border-radius: 8px;
+            gap: 6px;
+            padding: 4px 8px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
         }
         
         .playback-btn {
@@ -1537,24 +1579,30 @@
         /* Page List */
         .page-list {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-            max-height: 200px;
-            overflow-y: auto;
+            flex-direction: row;
+            gap: 6px;
+            overflow-x: auto;
+            overflow-y: hidden;
             padding: 4px;
+            flex: 1;
+            min-width: 0;
         }
         
         .page-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
+            gap: 6px;
+            padding: 6px 10px;
             background: var(--bg-primary);
             border: 2px solid transparent;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
-            font-size: 13px;
+            font-size: 12px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 100px;
+            max-width: 150px;
         }
         
         .page-item:hover {
@@ -2441,43 +2489,42 @@
                     </div>
                 </header>
                 
-                <!-- Prototype List Section -->
-                <div class="mockcraft-section" id="prototypeListSection">
-                    <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">原型列表</span>
-                        <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
-                    </div>
-                    <div class="prototype-list" id="prototypeList">
-                        <div class="prototype-placeholder">
-                            <p>暂无原型</p>
-                            <p class="hint">在对话中生成原型</p>
+                <!-- Main Content Area: Prototype List + Preview -->
+                <div class="mockcraft-main-content">
+                    <!-- Prototype List Section (Left Sidebar) -->
+                    <div class="mockcraft-sidebar" id="prototypeListSection">
+                        <div class="mockcraft-section-header">
+                            <span class="mockcraft-section-title">原型列表</span>
+                            <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
+                        </div>
+                        <div class="prototype-list" id="prototypeList">
+                            <div class="prototype-placeholder">
+                                <p>暂无原型</p>
+                                <p class="hint">在对话中生成原型</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Preview Section -->
-                <div class="mockcraft-section mockcraft-preview-section">
-                    <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">预览</span>
-                    </div>
-                    <div class="mockcraft-preview-container" id="mockcraftPreviewContainer">
-                        <div class="mockcraft-placeholder" id="mockcraftPlaceholder">
-                            <div class="icon">🎨</div>
-                            <h3>MockCraft</h3>
-                            <p>自然语言驱动的原型生成</p>
-                            <p class="hint">在对话中描述需求，AI将生成可交互原型</p>
+                    
+                    <!-- Preview Section (Right Main Area) -->
+                    <div class="mockcraft-preview-area">
+                        <div class="mockcraft-section mockcraft-preview-section">
+                            <div class="mockcraft-preview-container" id="mockcraftPreviewContainer">
+                                <div class="mockcraft-placeholder" id="mockcraftPlaceholder">
+                                    <div class="icon">🎨</div>
+                                    <h3>MockCraft</h3>
+                                    <p>自然语言驱动的原型生成</p>
+                                    <p class="hint">在对话中描述需求，AI将生成可交互原型</p>
+                                </div>
+                                <iframe id="mockcraftPreviewFrame" style="display: none;"></iframe>
+                            </div>
                         </div>
-                        <iframe id="mockcraftPreviewFrame" style="display: none;"></iframe>
-                    </div>
-                </div>
-                
-                <!-- Interaction Controls Section -->
-                <div class="mockcraft-section" id="interactionSection" style="display: none;">
-                    <div class="mockcraft-section-header">
-                        <span class="mockcraft-section-title">页面编排</span>
-                    </div>
-                    <div class="interaction-controls" id="interactionControls">
-                        <!-- Dynamically generated controls -->
+                        
+                        <!-- Interaction Controls Section (Horizontal at bottom) -->
+                        <div class="mockcraft-section mockcraft-orchestration-section" id="interactionSection" style="display: none;">
+                            <div class="interaction-controls" id="interactionControls">
+                                <!-- Dynamically generated controls -->
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
