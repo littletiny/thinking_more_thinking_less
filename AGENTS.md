@@ -1,78 +1,92 @@
 # DIY Development Agents.md
 
-> 目标：简单能用，而非工程质量。  
-> 底线：安全，安全，还是安全。
-
 ---
 
 ## 核心原则
-
-```
-能用 > 优雅
-简单 > 扩展
-硬编码 > 配置
-复制粘贴 > 抽象
-单文件 > 模块化
-JSON 文件 > 数据库
-console.log > 单元测试
-```
+- 当前项目使用acp连接kimi-cli
+- 技能栈越加简单越好
 
 ---
 
-## 记录原则：延迟记录，减少调用
+## WebChat 项目导航
 
-**工具调用有延迟，不要每条对话都记录。**
+### 项目概述
 
-### 何时记录
-- 用户**明确要求**："记录这个"、"保存讨论"
-- 话题**明确结束**且产生了值得保存的洞察
-- 形成了**可复用的新概念**
+WebChat 是 Zettel 知识库的 Web 聊天界面，通过 ACP 协议连接 kimi-cli，自动结构化保存聊天记录。
 
-### 何时跳过
-- 日常问答、调试、闲聊
-- 观点还在变化，未形成结论
-- 价值不高或已有类似记录
+**设计目标**：
+- 解放推理引擎：模型只负责推理，保存完全透明
+- 多 Session 并行：支持同时开多个对话
+- 零迁移成本：直接写入 conversations/ 目录
 
-### 决策口诀
+### 目录结构
+
 ```
-没结束？不记录
-没价值？不记录
-没要求？看情况
+webchat/
+├── server.py              # Flask 后端 (核心)
+├── sessions.json          # Session 元数据
+├── format_utils.py        # 格式化工具
+├── task_scheduler.py      # 任务调度器
+├── static/
+│   ├── index.html         # 前端页面
+│   └── app.js             # 前端逻辑
+├── mock_data/             # Mock 模式数据
+│   ├── conversations/     # 模拟对话记录
+│   └── sessions.json
+├── README.md              # 项目说明
+├── AGENTS.md              # 本文件
+├── HISTORY.md             # 开发历史
+└── FORMATTING.md          # 格式化规范
 ```
 
----
+### 核心文件导航
 
-## JSON Index Tools
+| 文件 | 职责 | 关键类/函数 |
+|------|------|------------|
+| `server.py` | Flask 后端、ACP 通信 | `WebSession`, `SessionAsyncRunner`, `SimpleACPClient` |
+| `static/app.js` | 前端逻辑 | SSE 流式接收、消息渲染 |
+| `format_utils.py` | 响应格式化 | `parse_and_format_response()` |
+| `task_scheduler.py` | 后台任务调度 | `TaskScheduler` |
 
-**用 CLI 工具操作 JSON，禁止直接编辑。**
+### 启动方式
 
 ```bash
-# ✅ 使用工具
-python tools/update_index.py add-concept "name" "category"
-python tools/update_index.py add-conversation "file.md" "topic" "2026-03-09" "concept1"
-python tools/update_index.py validate
+cd webchat
 
-# ❌ 不要直接编辑 index.json
+# 正常模式 (需要 kimi-cli)
+python server.py
+
+# Mock 模式 (无需 kimi，用于前端开发)
+MOCK_MODE=true python server.py
+
+# YOLO 模式 (自动批准所有权限请求，默认开启)
+YOLO_MODE=true python server.py
 ```
 
-### 为什么
+访问 http://localhost:5000
 
-| 直接编辑 JSON | 使用工具 |
-|--------------|---------|
-| 容易产生语法错误 | 结构化输入验证 |
-| metadata 与实际数据不同步 | 自动同步计数 |
-| 引用不存在的概念 | 自动引用检查 |
+### API 端点
+
+| Endpoint | Method | 说明 |
+|----------|--------|------|
+| `/api/sessions` | GET | 列出 sessions |
+| `/api/sessions` | POST | 创建新 session |
+| `/api/sessions/<id>/chat` | POST | 发送消息，SSE 流式返回 |
+| `/api/sessions/<id>/close` | POST | 关闭 session |
+| `/api/sessions/<id>/title` | PUT | 修改标题 |
+
+### Session 类型
+
+| 类型 | 创建 | 关闭 | 说明 |
+|------|------|------|------|
+| `web` | Web 创建 | ✅ 可关闭 | 当前实现 |
+| `attachable` | CLI 创建 | ❌ 不可关闭 | 预留，未来实现 |
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `MOCK_MODE` | 模拟模式，不连接 ACP | `false` |
+| `YOLO_MODE` | 自动批准所有权限请求 | `true` |
 
 ---
-
-## 记忆口诀
-
-```
-JSON 文件代替数据库
-单文件代替多模块
-内联样式代替 CSS
-复制粘贴代替抽象
-console.log 代替测试
-能用就行，安全除外
-用工具操作索引，不要直接编辑 JSON
-```
