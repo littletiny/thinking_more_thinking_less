@@ -51,12 +51,19 @@ class MockCraftManager:
         interactions: Optional[List[dict]] = None,
         state_schema: Optional[dict] = None
     ) -> Optional[Prototype]:
-        """更新原型（创建新版本）"""
+        """更新原型（仅名称更新时不创建新版本）"""
         existing = self.store.get_prototype(proto_id)
         if not existing:
             return None
         
-        # Fork新版本
+        # 如果只更新名称，不创建新版本
+        if name and html_content is None and interactions is None and state_schema is None:
+            existing.name = name
+            existing.updated_at = __import__('datetime').datetime.now().isoformat()
+            self.store.save_prototype(existing)
+            return existing
+        
+        # Fork新版本（内容变更时）
         new_proto = existing.fork(
             new_html_content=html_content if html_content is not None else None
         )
