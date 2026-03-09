@@ -114,11 +114,14 @@ async function createPrototype(name, htmlContent, interactions = [], stateSchema
     }
 }
 
-async function updatePrototype(protoId, updates) {
+async function updatePrototype(protoId, updates, options = {}) {
     try {
         const data = await mockcraftApiPut(`/api/mockcraft/prototypes/${protoId}`, updates);
         await loadPrototypes(currentSession?.id);
-        selectPrototype(data.prototype.id);
+        // 避免重命名时重复选中导致的闪烁问题
+        if (!options.skipSelect) {
+            selectPrototype(data.prototype.id);
+        }
         showToast('Prototype updated');
         return data.prototype;
     } catch (err) {
@@ -1018,7 +1021,8 @@ async function confirmRenamePrototype(protoId, newName) {
     renamingPrototypeId = null;
     
     try {
-        await updatePrototype(protoId, { name: newName });
+        // 重命名时跳过 selectPrototype 避免重复渲染和选中问题
+        await updatePrototype(protoId, { name: newName }, { skipSelect: true });
         showToast('已重命名');
     } catch (err) {
         showToast(`重命名失败: ${err.message}`);

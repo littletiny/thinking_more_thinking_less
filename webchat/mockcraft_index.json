@@ -1,0 +1,52 @@
+{
+  "prototypes": [
+    {
+      "id": "pr-0c9fcfd6",
+      "name": "导入的原型",
+      "session_id": "8e6e7788",
+      "updated_at": "2026-03-09T21:26:43.060378",
+      "version": 1,
+      "interactions_count": 0,
+      "state_variables": [],
+      "interactions": [],
+      "state_schema": {},
+      "current_state": {}
+    },
+    {
+      "id": "pr-a1039ff3",
+      "name": "test",
+      "session_id": "8e6e7788",
+      "updated_at": "2026-03-09T21:47:25.594884",
+      "version": 1,
+      "interactions_count": 0,
+      "state_variables": [],
+      "interactions": [],
+      "state_schema": {},
+      "current_state": {}
+    },
+    {
+      "id": "pr-a1039ff3",
+      "name": "111",
+      "session_id": "8e6e7788",
+      "updated_at": "2026-03-10T00:59:49.826387",
+      "version": 2,
+      "interactions_count": 0,
+      "state_variables": [],
+      "interactions": [],
+      "state_schema": {},
+      "current_state": {}
+    },
+    {
+      "id": "pr-0c9fcfd6",
+      "name": "test2",
+      "session_id": "8e6e7788",
+      "updated_at": "2026-03-10T00:59:57.067466",
+      "version": 2,
+      "interactions_count": 0,
+      "state_variables": [],
+      "interactions": [],
+      "state_schema": {},
+      "current_state": {}
+    }
+  ]
+}

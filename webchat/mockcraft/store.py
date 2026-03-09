@@ -45,16 +45,24 @@ class PrototypeStore:
         return self.prototypes_dir / f"{proto_id}-v{version}.html"
     
     def list_prototypes(self, session_id: Optional[str] = None) -> List[dict]:
-        """获取原型列表"""
+        """获取原型列表（每个原型只返回最新版本）"""
         index = self._load_index()
         prototypes = index.get('prototypes', [])
         
         if session_id:
             prototypes = [p for p in prototypes if p.get('session_id') == session_id]
         
-        # 按更新时间排序
-        prototypes.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
-        return prototypes
+        # 按原型ID分组，只保留每个原型的最新版本
+        proto_by_id = {}
+        for p in prototypes:
+            pid = p['id']
+            if pid not in proto_by_id or p.get('version', 1) > proto_by_id[pid].get('version', 1):
+                proto_by_id[pid] = p
+        
+        # 转换为列表并按更新时间排序
+        result = list(proto_by_id.values())
+        result.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
+        return result
     
     def get_prototype(self, proto_id: str) -> Optional[Prototype]:
         """获取完整原型"""
