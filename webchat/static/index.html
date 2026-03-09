@@ -995,6 +995,243 @@
             position: relative;
         }
         
+        /* MockCraft Panel Styles */
+        .mockcraft-section {
+            border-bottom: 1px solid var(--border);
+            padding: 12px;
+        }
+        
+        .mockcraft-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .mockcraft-section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .mockcraft-small-btn {
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .mockcraft-small-btn:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .prototype-list {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .prototype-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+        }
+        
+        .prototype-item:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .prototype-item.active {
+            background: rgba(16, 163, 127, 0.1);
+            border-color: var(--primary);
+        }
+        
+        .prototype-item .name {
+            flex: 1;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .prototype-item .version {
+            font-size: 11px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .prototype-item .meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: 8px;
+        }
+        
+        .prototype-placeholder {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        
+        .prototype-placeholder .hint {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        .mockcraft-preview-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 0;
+        }
+        
+        .mockcraft-preview-section .mockcraft-section-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .preview-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .prototype-version {
+            font-size: 11px;
+            color: var(--primary);
+            background: rgba(16, 163, 127, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 4px;
+        }
+        
+        .mockcraft-preview-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mockcraft-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .mockcraft-placeholder .icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+        
+        .mockcraft-placeholder h3 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .mockcraft-placeholder p {
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        
+        .mockcraft-placeholder .hint {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        #mockcraftPreviewFrame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .interaction-controls {
+            padding: 8px 0;
+        }
+        
+        .interaction-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .interaction-control label {
+            min-width: 80px;
+            color: var(--text-secondary);
+        }
+        
+        .interaction-control input,
+        .interaction-control select {
+            flex: 1;
+            padding: 6px 10px;
+            border: 11px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            background: var(--bg-primary);
+        }
+        
+        .interaction-control input:focus,
+        .interaction-control select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .mockcraft-actions {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .mockcraft-action-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .mockcraft-action-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .mockcraft-action-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .mockcraft-action-btn.secondary:hover {
+            background: var(--border);
+        }
+        
         .html-preview-frame {
             width: 100%;
             height: 100%;
@@ -1669,33 +1906,71 @@
             <!-- Divider (hidden by default) -->
             <div class="panel-divider" id="panelDivider" style="display: none;"></div>
             
-            <!-- HTML Preview Panel (hidden by default) -->
-            <div class="panel" id="htmlPanel" style="display: none;">
+            <!-- MockCraft Panel (hidden by default) -->
+            <div class="panel" id="mockcraftPanel" style="display: none;">
                 <header class="panel-header">
-                    <span class="title">HTML Preview</span>
+                    <span class="title">🛠️ MockCraft</span>
                     <div class="panel-actions">
-                        <button class="panel-btn" id="clearHtmlBtn" title="清空">🗑️</button>
-                        <button class="panel-btn" id="refreshHtmlBtn" title="刷新">🔄</button>
+                        <button class="panel-btn" id="refreshMockcraftBtn" title="刷新列表">🔄</button>
                         <button class="panel-btn" id="closeSplitBtn" title="关闭分屏" style="display: none;">✕</button>
                     </div>
                 </header>
-                <div class="panel-content" id="htmlPreviewContent">
-                    <div class="html-preview-placeholder">
-                        <div class="icon">🌐</div>
-                        <h3>HTML Preview</h3>
-                        <p>在下方输入 HTML 代码或从对话中加载</p>
+                
+                <!-- Prototype List Section -->
+                <div class="mockcraft-section" id="prototypeListSection">
+                    <div class="mockcraft-section-header">
+                        <span class="mockcraft-section-title">📄 原型列表</span>
+                        <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
+                    </div>
+                    <div class="prototype-list" id="prototypeList">
+                        <div class="prototype-placeholder">
+                            <p>暂无原型</p>
+                            <p class="hint">在对话中生成原型</p>
+                        </div>
                     </div>
                 </div>
-                <div class="html-input-area">
-                    <div class="html-input-container">
-                        <textarea 
-                            class="html-input" 
-                            id="htmlInput" 
-                            placeholder="输入 HTML 代码..."
-                            rows="2"
-                        ></textarea>
-                        <button class="html-render-btn" id="renderHtmlBtn">渲染</button>
+                
+                <!-- Preview Section -->
+                <div class="mockcraft-section mockcraft-preview-section">
+                    <div class="mockcraft-section-header">
+                        <span class="mockcraft-section-title">👁️ 预览</span>
+                        <div class="preview-controls">
+                            <span class="prototype-version" id="previewVersion"></span>
+                            <button class="mockcraft-small-btn" id="forkPrototypeBtn" title="创建新版本" style="display: none;">📋</button>
+                            <button class="mockcraft-small-btn" id="deletePrototypeBtn" title="删除" style="display: none;">🗑️</button>
+                        </div>
                     </div>
+                    <div class="mockcraft-preview-container" id="mockcraftPreviewContainer">
+                        <div class="mockcraft-placeholder" id="mockcraftPlaceholder">
+                            <div class="icon">🎨</div>
+                            <h3>MockCraft</h3>
+                            <p>自然语言驱动的原型生成</p>
+                            <p class="hint">在对话中描述需求，AI将生成可交互原型</p>
+                        </div>
+                        <iframe id="mockcraftPreviewFrame" style="display: none;"></iframe>
+                    </div>
+                </div>
+                
+                <!-- Interaction Controls Section -->
+                <div class="mockcraft-section" id="interactionSection" style="display: none;">
+                    <div class="mockcraft-section-header">
+                        <span class="mockcraft-section-title">🎮 交互控制</span>
+                    </div>
+                    <div class="interaction-controls" id="interactionControls">
+                        <!-- Dynamically generated controls -->
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mockcraft-actions">
+                    <button class="mockcraft-action-btn" id="generatePrototypeBtn">
+                        <span>✨</span>
+                        <span>生成原型</span>
+                    </button>
+                    <button class="mockcraft-action-btn secondary" id="importHtmlBtn">
+                        <span>📥</span>
+                        <span>导入HTML</span>
+                    </button>
                 </div>
             </div>
         </div>
