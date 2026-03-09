@@ -284,11 +284,6 @@ function selectSession(sessionId) {
     // Load conversation from file if exists
     loadConversation(session);
     
-    // Load prototypes for this session
-    if (window.MockCraft) {
-        MockCraft.loadPrototypes(sessionId);
-    }
-    
     // Close sidebar on mobile
     closeSidebar();
     
