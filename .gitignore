@@ -1,6 +1,9 @@
 # Mock mode data directory
 webchat/mock_data/
 
+# Prototype files (user generated)
+webchat/prototypes/
+
 # Session metadata (auto-generated)
 webchat/sessions.json
 
