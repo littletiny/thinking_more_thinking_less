@@ -1913,6 +1913,29 @@ def list_prototypes():
     return jsonify({"prototypes": prototypes})
 
 
+@app.route("/api/mockcraft/project-files", methods=["GET"])
+def list_project_files():
+    """获取项目文件列表（prototypes目录下的HTML文件）"""
+    if not mockcraft_manager:
+        return jsonify({"error": "MockCraft not available"}), 503
+    
+    files = mockcraft_manager.list_project_files()
+    return jsonify({"files": files})
+
+
+@app.route("/api/mockcraft/project-files/<path:filename>", methods=["GET"])
+def get_project_file(filename):
+    """获取项目文件内容"""
+    if not mockcraft_manager:
+        return jsonify({"error": "MockCraft not available"}), 503
+    
+    content = mockcraft_manager.get_project_file_content(filename)
+    if content is None:
+        return jsonify({"error": "File not found"}), 404
+    
+    return jsonify({"content": content})
+
+
 @app.route("/api/mockcraft/prototypes", methods=["POST"])
 def create_prototype():
     """创建新原型"""

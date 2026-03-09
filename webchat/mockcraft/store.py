@@ -64,6 +64,41 @@ class PrototypeStore:
         result.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
         return result
     
+    def list_project_files(self) -> List[dict]:
+        """获取项目文件列表（prototypes目录下的HTML文件）"""
+        files = []
+        try:
+            for file_path in self.prototypes_dir.glob('*.html'):
+                stat = file_path.stat()
+                files.append({
+                    'name': file_path.name,
+                    'path': str(file_path.relative_to(self.base_dir)),
+                    'size': stat.st_size,
+                    'modified': __import__('datetime').datetime.fromtimestamp(stat.st_mtime).isoformat()
+                })
+            # 按修改时间倒序
+            files.sort(key=lambda x: x['modified'], reverse=True)
+        except Exception:
+            pass
+        return files
+    
+    def get_project_file_content(self, filename: str) -> Optional[str]:
+        """获取项目文件内容"""
+        file_path = self.prototypes_dir / filename
+        # 安全检查：确保文件在prototypes目录下
+        try:
+            file_path.resolve().relative_to(self.prototypes_dir.resolve())
+        except ValueError:
+            return None
+        
+        if not file_path.exists() or not file_path.is_file():
+            return None
+        
+        try:
+            return file_path.read_text(encoding='utf-8')
+        except Exception:
+            return None
+    
     def get_prototype(self, proto_id: str) -> Optional[Prototype]:
         """获取完整原型"""
         index = self._load_index()

@@ -43,6 +43,14 @@ class MockCraftManager:
         """列出原型"""
         return self.store.list_prototypes(session_id)
     
+    def list_project_files(self) -> List[dict]:
+        """列出项目文件（prototypes目录下的HTML文件）"""
+        return self.store.list_project_files()
+    
+    def get_project_file_content(self, filename: str) -> Optional[str]:
+        """获取项目文件内容"""
+        return self.store.get_project_file_content(filename)
+    
     def update_prototype(
         self,
         proto_id: str,

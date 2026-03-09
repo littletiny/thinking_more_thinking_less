@@ -1013,7 +1013,7 @@ function checkForPrototypeCommand(message) {
 
 // ============== Import HTML Dialog ==============
 
-function showImportHtmlDialog() {
+async function showImportHtmlDialog() {
     // 创建对话框
     const dialog = document.createElement('div');
     dialog.className = 'mockcraft-import-dialog';
@@ -1026,17 +1026,12 @@ function showImportHtmlDialog() {
                 </div>
                 <div class="mockcraft-import-body">
                     <div class="mockcraft-import-tabs">
-                        <button class="mockcraft-import-tab active" data-tab="file">从文件加载</button>
+                        <button class="mockcraft-import-tab active" data-tab="project">加载项目文件</button>
                         <button class="mockcraft-import-tab" data-tab="paste">粘贴代码</button>
                     </div>
-                    <div class="mockcraft-import-panel active" data-panel="file">
-                        <div class="mockcraft-file-dropzone" id="fileDropzone">
-                            <p>点击选择或拖拽 HTML 文件到此处</p>
-                            <input type="file" id="htmlFileInput" accept=".html,.htm,.txt" hidden>
-                        </div>
-                        <div class="mockcraft-file-info" id="fileInfo" style="display: none;">
-                            <span class="mockcraft-file-name"></span>
-                            <button class="mockcraft-file-clear">&times;</button>
+                    <div class="mockcraft-import-panel active" data-panel="project">
+                        <div class="mockcraft-project-files" id="projectFilesList">
+                            <div class="mockcraft-loading">加载中...</div>
                         </div>
                     </div>
                     <div class="mockcraft-import-panel" data-panel="paste">
@@ -1134,48 +1129,55 @@ function showImportHtmlDialog() {
         .mockcraft-import-panel.active {
             display: block;
         }
-        .mockcraft-file-dropzone {
-            border: 2px dashed var(--border, #e5e5e5);
+        .mockcraft-project-files {
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid var(--border, #e5e5e5);
             border-radius: 8px;
+        }
+        .mockcraft-loading {
             padding: 40px;
             text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .mockcraft-file-dropzone:hover, .mockcraft-file-dropzone.dragover {
-            border-color: var(--primary, #10a37f);
-            background: rgba(16, 163, 127, 0.05);
-        }
-        .mockcraft-file-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-        .mockcraft-file-dropzone p {
             color: var(--text-secondary, #6b6c7a);
-            margin: 0;
         }
-        .mockcraft-file-info {
+        .mockcraft-empty-files {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-secondary, #6b6c7a);
+        }
+        .mockcraft-project-file-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 12px;
-            background: var(--bg-secondary, #f7f7f8);
-            border-radius: 8px;
-            margin-top: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border, #e5e5e5);
+            transition: background 0.15s;
         }
-        .mockcraft-file-name {
+        .mockcraft-project-file-item:last-child {
+            border-bottom: none;
+        }
+        .mockcraft-project-file-item:hover {
+            background: var(--bg-secondary, #f7f7f8);
+        }
+        .mockcraft-project-file-item.selected {
+            background: rgba(16, 163, 127, 0.1);
+        }
+        .mockcraft-project-file-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        .mockcraft-project-file-info {
+            flex: 1;
+        }
+        .mockcraft-project-file-name {
+            font-size: 14px;
             font-weight: 500;
             color: var(--text-primary, #343541);
+            margin-bottom: 2px;
         }
-        .mockcraft-file-clear {
-            background: none;
-            border: none;
-            font-size: 18px;
-            cursor: pointer;
+        .mockcraft-project-file-meta {
+            font-size: 12px;
             color: var(--text-secondary, #6b6c7a);
-        }
-        .mockcraft-file-clear:hover {
-            color: var(--danger, #ef4444);
         }
         #pasteHtmlInput {
             width: 100%;
@@ -1241,8 +1243,8 @@ function showImportHtmlDialog() {
     document.head.appendChild(style);
     
     // 状态
-    let selectedFile = null;
-    let fileContent = null;
+    let selectedProjectFile = null;
+    let projectFileContent = null;
     
     // 关闭对话框
     function closeDialog() {
@@ -1253,8 +1255,85 @@ function showImportHtmlDialog() {
     // 更新导入按钮状态
     function updateImportButton() {
         const name = document.getElementById('prototypeNameInput').value.trim();
-        const hasContent = selectedFile || document.getElementById('pasteHtmlInput').value.trim();
+        const activeTab = dialog.querySelector('.mockcraft-import-tab.active').dataset.tab;
+        let hasContent = false;
+        
+        if (activeTab === 'project') {
+            hasContent = !!selectedProjectFile && !!projectFileContent;
+        } else if (activeTab === 'paste') {
+            hasContent = !!document.getElementById('pasteHtmlInput').value.trim();
+        }
+        
         document.getElementById('confirmImportBtn').disabled = !(name && hasContent);
+    }
+    
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    // 加载项目文件列表
+    async function loadProjectFiles() {
+        const listEl = document.getElementById('projectFilesList');
+        try {
+            const response = await fetch('/api/mockcraft/project-files');
+            const data = await response.json();
+            
+            if (!data.files || data.files.length === 0) {
+                listEl.innerHTML = '<div class="mockcraft-empty-files">暂无项目文件</div>';
+                return;
+            }
+            
+            listEl.innerHTML = data.files.map(file => `
+                <div class="mockcraft-project-file-item" data-filename="${escapeHtml(file.name)}">
+                    <span class="mockcraft-project-file-icon">📄</span>
+                    <div class="mockcraft-project-file-info">
+                        <div class="mockcraft-project-file-name">${escapeHtml(file.name)}</div>
+                        <div class="mockcraft-project-file-meta">${formatFileSize(file.size)} · ${new Date(file.modified).toLocaleDateString()}</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // 绑定点击事件
+            listEl.querySelectorAll('.mockcraft-project-file-item').forEach(item => {
+                item.addEventListener('click', () => selectProjectFile(item.dataset.filename));
+            });
+        } catch (err) {
+            listEl.innerHTML = '<div class="mockcraft-empty-files">加载失败</div>';
+        }
+    }
+    
+    // 选择项目文件
+    async function selectProjectFile(filename) {
+        // 更新选中状态
+        document.querySelectorAll('.mockcraft-project-file-item').forEach(item => {
+            item.classList.toggle('selected', item.dataset.filename === filename);
+        });
+        
+        selectedProjectFile = filename;
+        
+        try {
+            const response = await fetch(`/api/mockcraft/project-files/${encodeURIComponent(filename)}`);
+            const data = await response.json();
+            
+            if (data.content) {
+                projectFileContent = data.content;
+                // 自动填充文件名作为默认原型名
+                const nameInput = document.getElementById('prototypeNameInput');
+                if (!nameInput.value) {
+                    nameInput.value = filename.replace(/\.html?$/i, '');
+                }
+            } else {
+                projectFileContent = null;
+            }
+        } catch (err) {
+            projectFileContent = null;
+            showToast('读取文件失败');
+        }
+        
+        updateImportButton();
     }
     
     // 标签切换
@@ -1266,77 +1345,6 @@ function showImportHtmlDialog() {
             dialog.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
             updateImportButton();
         });
-    });
-    
-    // 文件选择
-    const fileInput = document.getElementById('htmlFileInput');
-    const fileDropzone = document.getElementById('fileDropzone');
-    const fileInfo = document.getElementById('fileInfo');
-    
-    fileDropzone.addEventListener('click', () => fileInput.click());
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
-        }
-    });
-    
-    // 拖拽上传
-    fileDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        fileDropzone.classList.add('dragover');
-    });
-    
-    fileDropzone.addEventListener('dragleave', () => {
-        fileDropzone.classList.remove('dragover');
-    });
-    
-    fileDropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileDropzone.classList.remove('dragover');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    });
-    
-    // 处理文件
-    function handleFile(file) {
-        if (!file.name.match(/\.(html|htm|txt)$/i)) {
-            showToast('请选择 .html, .htm 或 .txt 文件');
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            fileContent = e.target.result;
-            selectedFile = file;
-            fileDropzone.style.display = 'none';
-            fileInfo.style.display = 'flex';
-            fileInfo.querySelector('.mockcraft-file-name').textContent = `${file.name} (${formatFileSize(file.size)})`;
-            updateImportButton();
-        };
-        reader.onerror = () => {
-            showToast('文件读取失败');
-        };
-        reader.readAsText(file);
-    }
-    
-    // 格式化文件大小
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-    
-    // 清除文件
-    fileInfo.querySelector('.mockcraft-file-clear').addEventListener('click', () => {
-        selectedFile = null;
-        fileContent = null;
-        fileInput.value = '';
-        fileDropzone.style.display = 'block';
-        fileInfo.style.display = 'none';
-        updateImportButton();
     });
     
     // 粘贴输入
@@ -1360,8 +1368,8 @@ function showImportHtmlDialog() {
         // 获取当前激活的标签
         const activeTab = dialog.querySelector('.mockcraft-import-tab.active').dataset.tab;
         
-        if (activeTab === 'file' && fileContent) {
-            html = fileContent;
+        if (activeTab === 'project' && projectFileContent) {
+            html = projectFileContent;
         } else if (activeTab === 'paste') {
             html = document.getElementById('pasteHtmlInput').value.trim();
         }
@@ -1381,7 +1389,8 @@ function showImportHtmlDialog() {
         }
     });
     
-    // 初始检查
+    // 初始化
+    loadProjectFiles();
     updateImportButton();
 }
 
