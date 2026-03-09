@@ -1427,9 +1427,7 @@ function renderPageOrchestration() {
     
     // 保存当前输入值（如果存在）
     const intervalInput = document.getElementById('playIntervalInput');
-    const loopCheckbox = document.getElementById('loopPlayback');
     const savedInterval = intervalInput?.value || '2';
-    const savedLoop = loopCheckbox?.checked || false;
     
     // 每次都显示区域
     section.style.display = 'block';
@@ -1471,7 +1469,7 @@ function renderPageOrchestration() {
     let html = `
         <div class="page-orchestration">
             
-            <!-- 播放控制栏（合并间隔和循环设置） -->
+            <!-- 播放控制栏 -->
             <div class="playback-controls">
                 <button class="playback-btn ${isPlaying ? 'active' : ''}" id="playPauseBtn" title="${isPlaying ? '暂停' : '播放'}">
                     ${isPlaying ? '⏸️' : '▶️'}
@@ -1483,10 +1481,6 @@ function renderPageOrchestration() {
                     <label class="playback-option">
                         <input type="number" id="playIntervalInput" min="1" max="60" value="2" title="间隔秒数">
                         <span>s</span>
-                    </label>
-                    <label class="playback-option checkbox" title="循环播放">
-                        <input type="checkbox" id="loopPlayback">
-                        <span>循环</span>
                     </label>
                 </div>
             </div>
@@ -1524,9 +1518,7 @@ function renderPageOrchestration() {
     
     // 恢复保存的值
     const newIntervalInput = document.getElementById('playIntervalInput');
-    const newLoopCheckbox = document.getElementById('loopPlayback');
     if (newIntervalInput) newIntervalInput.value = savedInterval;
-    if (newLoopCheckbox) newLoopCheckbox.checked = savedLoop;
     
     // 绑定事件
     console.log('[renderPageOrchestration] About to bind events...');
@@ -1580,7 +1572,7 @@ function bindPageOrchestrationEvents() {
         navigatePage(1);
     });
     
-    // 注：播放间隔和循环设置在 renderPageOrchestration 中处理，这里不需要重复设置
+    // 注：播放间隔设置在 renderPageOrchestration 中处理，这里不需要重复设置
     
     // 页面列表拖拽
     const pageList = document.getElementById('pageList');
@@ -1704,7 +1696,6 @@ function startPlayback() {
     
     // 先获取设置值，再重新渲染（renderPageOrchestration 会重建 DOM）
     const interval = parseInt(document.getElementById('playIntervalInput')?.value || '2');
-    const loop = document.getElementById('loopPlayback')?.checked ?? false;
     
     MockCraftState.isPlaying = true;
     console.log('[startPlayback] set isPlaying to true, re-rendering');
@@ -1717,12 +1708,8 @@ function startPlayback() {
         let nextIndex = MockCraftState.currentPageIndex + 1;
         
         if (nextIndex >= MockCraftState.pages.length) {
-            if (loop) {
-                nextIndex = 0;
-            } else {
-                stopPlayback();
-                return;
-            }
+            stopPlayback();
+            return;
         }
         
         goToPage(nextIndex);
