@@ -1577,6 +1577,35 @@
             cursor: grabbing;
         }
         
+        .page-item .page-menu-btn {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: background 0.15s, color 0.15s;
+            padding: 0;
+            margin-left: auto;
+        }
+        
+        .page-item:hover .page-menu-btn {
+            opacity: 1;
+        }
+        
+        .page-item .page-menu-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .page-item.active .page-menu-btn {
+            color: var(--primary);
+        }
+        
         .page-number {
             display: flex;
             align-items: center;

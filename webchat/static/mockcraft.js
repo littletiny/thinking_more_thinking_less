@@ -1532,6 +1532,7 @@ function renderPageOrchestration() {
         html += `
             <div class="page-item ${isActive ? 'active' : ''} ${isPlayingThis ? 'playing' : ''}" 
                  data-index="${index}" 
+                 data-page-id="${page.id}"
                  draggable="true"
                  title="拖拽排序点击切换页面">
                 <span class="page-drag-handle">☰</span>
@@ -1539,6 +1540,13 @@ function renderPageOrchestration() {
                 <span class="page-name">${escapeHtml(page.name)}</span>
                 <span class="page-type">📄</span>
                 ${isActive ? '<span class="page-status">●</span>' : ''}
+                <button class="page-menu-btn" data-page-index="${index}" title="操作">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="6" r="1"/>
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="18" r="1"/>
+                    </svg>
+                </button>
             </div>
         `;
     });
@@ -1562,6 +1570,122 @@ function renderPageOrchestration() {
     } catch (err) {
         console.error('[renderPageOrchestration] Error binding events:', err);
     }
+    
+    // 绑定页面项操作菜单按钮事件
+    container.querySelectorAll('.page-menu-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const pageIndex = parseInt(btn.dataset.pageIndex);
+            togglePageMenuForItem(pageIndex, btn);
+        });
+    });
+}
+
+// ============== Page Item Menu Functions ==============
+
+let currentPageMenu = null;
+let currentMenuPageIndex = null;
+
+function togglePageMenuForItem(pageIndex, btnElement) {
+    if (currentPageMenu && currentMenuPageIndex === pageIndex) {
+        closePageMenu();
+        return;
+    }
+    
+    closePageMenu();
+    
+    const rect = btnElement.getBoundingClientRect();
+    
+    const menu = document.createElement('div');
+    menu.className = 'page-menu prototype-menu';
+    menu.id = 'pageMenu';
+    
+    menu.innerHTML = `
+        <button class="prototype-menu-item danger" data-action="remove">🗑️ 从编排移除</button>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    const menuWidth = 120;
+    const menuHeight = 50;
+    
+    let left = rect.right - menuWidth;
+    let top = rect.bottom + 4;
+    
+    if (left + menuWidth > window.innerWidth) {
+        left = window.innerWidth - menuWidth - 10;
+    }
+    if (left < 10) {
+        left = 10;
+    }
+    if (top + menuHeight > window.innerHeight) {
+        top = rect.top - menuHeight - 4;
+    }
+    
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    currentPageMenu = menu;
+    currentMenuPageIndex = pageIndex;
+    
+    menu.querySelectorAll('.prototype-menu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handlePageMenuAction(item.dataset.action, pageIndex);
+        });
+    });
+}
+
+function closePageMenu() {
+    if (currentPageMenu) {
+        currentPageMenu.remove();
+        currentPageMenu = null;
+    }
+    currentMenuPageIndex = null;
+}
+
+function handlePageMenuAction(action, pageIndex) {
+    closePageMenu();
+    
+    switch (action) {
+        case 'remove':
+            removeFromOrchestration(pageIndex);
+            break;
+    }
+}
+
+/**
+ * 从页面编排中移除指定页面
+ */
+function removeFromOrchestration(pageIndex) {
+    if (pageIndex < 0 || pageIndex >= MockCraftState.pages.length) return;
+    
+    const page = MockCraftState.pages[pageIndex];
+    if (!page) return;
+    
+    // 从编排中移除
+    MockCraftState.pages.splice(pageIndex, 1);
+    
+    // 调整当前页面索引
+    if (MockCraftState.currentPageIndex >= MockCraftState.pages.length) {
+        MockCraftState.currentPageIndex = Math.max(0, MockCraftState.pages.length - 1);
+    }
+    
+    // 如果移除后还有页面，切换到新的当前页面
+    if (MockCraftState.pages.length > 0) {
+        const newPage = MockCraftState.pages[MockCraftState.currentPageIndex];
+        if (newPage && MockCraftState.currentPrototype?.id !== newPage.id) {
+            // 切换到不同的原型
+            selectPrototype(newPage.id);
+        } else {
+            renderPageOrchestration();
+        }
+    } else {
+        // 没有页面了，清空预览
+        clearPreview();
+        renderPageOrchestration();
+    }
+    
+    showToast('已从编排中移除');
 }
 
 /**
