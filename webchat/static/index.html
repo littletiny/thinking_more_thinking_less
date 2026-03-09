@@ -1015,17 +1015,19 @@
         }
         
         .mockcraft-small-btn {
-            background: transparent;
+            background: none;
             border: none;
             font-size: 14px;
+            color: var(--text-secondary);
             cursor: pointer;
             padding: 4px 6px;
             border-radius: 4px;
-            transition: background 0.2s;
+            transition: all 0.15s;
         }
         
         .mockcraft-small-btn:hover {
             background: var(--bg-secondary);
+            color: var(--text-primary);
         }
         
         .prototype-item-wrapper {
@@ -1040,18 +1042,23 @@
         }
         
         .prototype-menu-trigger {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             opacity: 0;
             background: none;
             border: none;
-            font-size: 14px;
-            cursor: pointer;
-            padding: 4px 6px;
             border-radius: 4px;
+            font-size: 14px;
             color: var(--text-secondary);
-            transition: all 0.2s;
+            cursor: pointer;
+            transition: opacity 0.15s, background 0.15s;
         }
         
-        .prototype-item-wrapper:hover .prototype-menu-trigger {
+        .prototype-item-wrapper:hover .prototype-menu-trigger,
+        .prototype-menu-trigger[open] {
             opacity: 1;
         }
         
