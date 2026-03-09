@@ -1702,12 +1702,13 @@ function startPlayback() {
         return;
     }
     
+    // 先获取设置值，再重新渲染（renderPageOrchestration 会重建 DOM）
+    const interval = parseInt(document.getElementById('playIntervalInput')?.value || '2');
+    const loop = document.getElementById('loopPlayback')?.checked ?? false;
+    
     MockCraftState.isPlaying = true;
     console.log('[startPlayback] set isPlaying to true, re-rendering');
     renderPageOrchestration();
-    
-    const interval = parseInt(document.getElementById('playIntervalInput')?.value || '2');
-    const loop = document.getElementById('loopPlayback')?.checked ?? false;
     
     // 立即切换到当前页面
     updatePreviewForCurrentPage();
