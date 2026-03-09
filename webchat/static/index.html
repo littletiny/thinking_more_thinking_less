@@ -2116,31 +2116,6 @@
             opacity: 0.3;
         }
         
-        /* Theme Toggle Button */
-        .theme-toggle-btn {
-            position: fixed;
-            bottom: 80px;
-            right: 20px;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            font-size: 20px;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .theme-toggle-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
         /* Theme Dialog */
         .theme-overlay {
             display: none;
@@ -2421,6 +2396,7 @@
                     </div>
                     <span class="title" id="chatTitle">Zettel WebChat</span>
                     <div class="header-actions">
+                        <button class="panel-btn" id="themeToggleBtn" title="切换代码主题">🎨</button>
                         <button class="panel-btn" id="splitVerticalBtn" title="垂直分屏">↔️</button>
                         <button class="panel-btn" id="splitHorizontalBtn" title="水平分屏">↕️</button>
                         <button class="export-btn" id="exportBtn" title="导出聊天记录">
@@ -2550,9 +2526,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle-btn" id="themeToggleBtn" title="切换代码主题">🎨</button>
     
     <div class="toast" id="toast"></div>
     
