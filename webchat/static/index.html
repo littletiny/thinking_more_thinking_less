@@ -1028,10 +1028,36 @@
             background: var(--bg-secondary);
         }
         
-        .prototype-list-controls {
+        .prototype-item-wrapper {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 4px;
+        }
+        
+        .prototype-item-wrapper .prototype-item {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .prototype-menu-trigger {
+            opacity: 0;
+            background: none;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        
+        .prototype-item-wrapper:hover .prototype-menu-trigger {
+            opacity: 1;
+        }
+        
+        .prototype-menu-trigger:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
         
         .mockcraft-menu-btn {
@@ -2031,10 +2057,7 @@
                 <div class="mockcraft-section" id="prototypeListSection">
                     <div class="mockcraft-section-header">
                         <span class="mockcraft-section-title">原型列表</span>
-                        <div class="prototype-list-controls">
-                            <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
-                            <button class="mockcraft-menu-btn" id="prototypeMenuBtn" title="更多操作" style="display: none;">⋮</button>
-                        </div>
+                        <button class="mockcraft-small-btn" id="newPrototypeBtn" title="新建原型">+</button>
                     </div>
                     <div class="prototype-list" id="prototypeList">
                         <div class="prototype-placeholder">

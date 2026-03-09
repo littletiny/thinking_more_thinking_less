@@ -236,9 +236,12 @@ function renderPrototypeList() {
     }
     
     listEl.innerHTML = MockCraftState.prototypes.map(proto => `
-        <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
-             data-id="${proto.id}">
-            <span class="name">${escapeHtml(proto.name)}</span>
+        <div class="prototype-item-wrapper" style="position: relative;">
+            <div class="prototype-item ${MockCraftState.currentPrototype?.id === proto.id ? 'active' : ''}" 
+                 data-id="${proto.id}">
+                <span class="name">${escapeHtml(proto.name)}</span>
+            </div>
+            <button class="prototype-menu-trigger" data-proto-id="${proto.id}" onclick="event.stopPropagation()">⋮</button>
         </div>
     `).join('');
     
@@ -246,6 +249,15 @@ function renderPrototypeList() {
     listEl.querySelectorAll('.prototype-item').forEach(item => {
         item.addEventListener('click', () => {
             selectPrototype(item.dataset.id);
+        });
+    });
+    
+    // 添加菜单按钮事件
+    listEl.querySelectorAll('.prototype-menu-trigger').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const protoId = btn.dataset.protoId;
+            togglePrototypeMenuForItem(protoId, btn);
         });
     });
 }
@@ -260,8 +272,6 @@ async function selectPrototype(protoId) {
         renderPrototypePreview(protoId);
         renderInteractionControls(data.prototype);
         
-        // 显示菜单按钮
-        document.getElementById('prototypeMenuBtn').style.display = 'inline-block';
         document.getElementById('interactionSection').style.display = 'block';
         
     } catch (err) {
@@ -280,7 +290,6 @@ function clearPreview() {
     iframe.srcdoc = '';
     placeholder.style.display = 'flex';
     
-    document.getElementById('prototypeMenuBtn').style.display = 'none';
     document.getElementById('interactionSection').style.display = 'none';
     document.getElementById('interactionControls').innerHTML = '';
     
@@ -401,12 +410,6 @@ function initMockCraft() {
     // 导入HTML按钮
     document.getElementById('importHtmlBtn')?.addEventListener('click', showImportHtmlDialog);
     
-    // 菜单按钮
-    document.getElementById('prototypeMenuBtn')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        togglePrototypeMenu();
-    });
-    
     // 点击外部关闭菜单
     document.addEventListener('click', () => {
         if (prototypeMenuVisible) {
@@ -435,31 +438,23 @@ function handleIframeMessage(event) {
 // ============== Prototype Menu Functions ==============
 
 let currentPrototypeMenu = null;
-let renamingPrototypeId = null;
+let currentMenuProtoId = null;
 
-function togglePrototypeMenu() {
-    if (prototypeMenuVisible) {
+function togglePrototypeMenuForItem(protoId, btnElement) {
+    if (prototypeMenuVisible && currentMenuProtoId === protoId) {
         closePrototypeMenu();
-    } else {
-        showPrototypeMenu();
+        return;
     }
-}
-
-function showPrototypeMenu() {
-    if (!MockCraftState.currentPrototype) return;
     
     closePrototypeMenu(); // 先关闭已有的
     
-    const btn = document.getElementById('prototypeMenuBtn');
-    const rect = btn.getBoundingClientRect();
+    const rect = btnElement.getBoundingClientRect();
     
     const menu = document.createElement('div');
     menu.className = 'prototype-menu';
     menu.id = 'prototypeMenu';
-    menu.style.left = `${rect.left - 100}px`;
+    menu.style.left = `${rect.left}px`;
     menu.style.top = `${rect.bottom + 4}px`;
-    
-    const proto = MockCraftState.currentPrototype;
     
     // 菜单只保留删除功能
     menu.innerHTML = `
@@ -468,13 +463,14 @@ function showPrototypeMenu() {
     
     document.body.appendChild(menu);
     currentPrototypeMenu = menu;
+    currentMenuProtoId = protoId;
     prototypeMenuVisible = true;
     
     // 添加事件监听
     menu.querySelectorAll('.prototype-menu-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
-            handlePrototypeMenuAction(item.dataset.action);
+            handlePrototypeMenuAction(item.dataset.action, protoId);
         });
     });
 }
@@ -484,24 +480,23 @@ function closePrototypeMenu() {
         currentPrototypeMenu.remove();
         currentPrototypeMenu = null;
     }
-    renamingPrototypeId = null;
+    currentMenuProtoId = null;
     prototypeMenuVisible = false;
 }
 
-function handlePrototypeMenuAction(action) {
-    const proto = MockCraftState.currentPrototype;
+function handlePrototypeMenuAction(action, protoId) {
+    const proto = MockCraftState.prototypes.find(p => p.id === protoId);
     if (!proto) return;
     
     switch (action) {
         case 'delete':
             closePrototypeMenu();
-            showDeletePrototypeConfirm();
+            showDeletePrototypeConfirmForProto(proto);
             break;
     }
 }
 
-function showDeletePrototypeConfirm() {
-    const proto = MockCraftState.currentPrototype;
+function showDeletePrototypeConfirmForProto(proto) {
     if (!proto) return;
     
     // 去掉 http:// 或 https:// 前缀用于显示
@@ -514,6 +509,13 @@ function showDeletePrototypeConfirm() {
         okClass: 'danger',
         onOk: () => deletePrototype(proto.id)
     });
+}
+
+// 保留以下函数以兼容以前的代码（如果有）
+function showDeletePrototypeConfirm() {
+    const proto = MockCraftState.currentPrototype;
+    if (!proto) return;
+    showDeletePrototypeConfirmForProto(proto);
 }
 
 // 去掉 URL 前缀的辅助函数
