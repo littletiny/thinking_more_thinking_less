@@ -906,6 +906,175 @@
             position: relative;
         }
         
+        /* Split Panel Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            min-width: 0;
+            min-height: 0;
+        }
+        
+        .main-container.split-vertical {
+            flex-direction: row;
+        }
+        
+        .main-container.split-horizontal {
+            flex-direction: column;
+        }
+        
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+        
+        .panel-divider {
+            background: var(--border);
+            flex-shrink: 0;
+        }
+        
+        .main-container.split-vertical .panel-divider {
+            width: 4px;
+            cursor: col-resize;
+        }
+        
+        .main-container.split-horizontal .panel-divider {
+            height: 4px;
+            cursor: row-resize;
+        }
+        
+        .panel-divider:hover {
+            background: var(--primary);
+        }
+        
+        .panel-header {
+            height: var(--header-height);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            background: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .panel-header .title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .panel-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .panel-btn {
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        
+        .panel-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        .panel-content {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+        
+        .html-preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .html-preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .html-preview-placeholder .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .html-preview-placeholder h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .html-preview-placeholder p {
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .html-input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+        
+        .html-input-container {
+            display: flex;
+            gap: 8px;
+            max-width: 100%;
+        }
+        
+        .html-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'SF Mono', Monaco, monospace;
+            resize: none;
+            outline: none;
+            min-height: 40px;
+            max-height: 120px;
+        }
+        
+        .html-input:focus {
+            border-color: var(--primary);
+        }
+        
+        .html-render-btn {
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        
+        .html-render-btn:hover {
+            background: var(--primary-hover);
+        }
+        
         /* Image attachments preview */
         .image-attachments {
             max-width: 800px;
@@ -1371,9 +1540,47 @@
                 display: block;
             }
             
+            /* Mobile: disable split panel, always show only chat */
+            .main-container.split-vertical,
+            .main-container.split-horizontal {
+                flex-direction: column;
+            }
+            
+            .main-container.split-vertical .panel-divider,
+            .main-container.split-horizontal .panel-divider {
+                display: none !important;
+            }
+            
+            .main-container.split-vertical #htmlPanel,
+            .main-container.split-horizontal #htmlPanel {
+                display: none !important;
+            }
+            
+            .main-container.split-vertical #chatPanel,
+            .main-container.split-horizontal #chatPanel {
+                flex: 1 !important;
+            }
+            
+            .panel-btn[title*="分屏"],
+            .panel-btn[title="关闭分屏"] {
+                display: none !important;
+            }
+            
             .message {
                 padding: 16px;
                 gap: 12px;
+            }
+            
+            .message .avatar {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+            
+            .input-area {
+                padding: 12px;
+            }
+        }
             }
             
             .message .avatar {
@@ -1409,51 +1616,89 @@
             </div>
         </aside>
         
-        <!-- Main Chat Area -->
-        <main class="main">
-            <header class="chat-header">
-                <div style="display: flex; align-items: center;">
-                    <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
-                    <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="收起会话列表">📂</button>
+        <!-- Main Container with Split Panels -->
+        <div class="main-container" id="mainContainer">
+            <!-- Chat Panel -->
+            <div class="panel" id="chatPanel">
+                <header class="chat-header">
+                    <div style="display: flex; align-items: center;">
+                        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+                        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="收起会话列表">📂</button>
+                    </div>
+                    <span class="title" id="chatTitle">Zettel WebChat</span>
+                    <div class="header-actions">
+                        <button class="panel-btn" id="splitVerticalBtn" title="垂直分屏">↔️</button>
+                        <button class="panel-btn" id="splitHorizontalBtn" title="水平分屏">↕️</button>
+                        <button class="export-btn" id="exportBtn" title="导出聊天记录">
+                            <span>📥</span>
+                            <span>导出</span>
+                        </button>
+                        <button class="toggle-tools-btn" id="toggleToolsBtn" title="显示/隐藏工具调用">🛠️</button>
+                    </div>
+                </header>
+                
+                <div class="messages" id="messages">
+                    <div class="empty-state">
+                        <div class="logo">📝</div>
+                        <h2>Welcome to Zettel WebChat</h2>
+                        <p>Start a new conversation or select an existing one</p>
+                    </div>
                 </div>
-                <span class="title" id="chatTitle">Zettel WebChat</span>
-                <div class="header-actions">
-                    <button class="export-btn" id="exportBtn" title="导出聊天记录">
-                        <span>📥</span>
-                        <span>导出</span>
-                    </button>
-                    <button class="toggle-tools-btn" id="toggleToolsBtn" title="显示/隐藏工具调用">🛠️</button>
-                </div>
-            </header>
-            
-            <div class="messages" id="messages">
-                <div class="empty-state">
-                    <div class="logo">📝</div>
-                    <h2>Welcome to Zettel WebChat</h2>
-                    <p>Start a new conversation or select an existing one</p>
+                
+                <div class="input-area">
+                    <div class="input-status" id="inputStatus"></div>
+                    <!-- Image attachments preview -->
+                    <div class="image-attachments" id="imageAttachments"></div>
+                    <div class="input-container">
+                        <textarea 
+                            class="message-input" 
+                            id="messageInput" 
+                            placeholder="Message... (Paste image to attach)"
+                            rows="1"
+                        ></textarea>
+                        <button class="send-btn" id="sendBtn" disabled>
+                            ↑
+                        </button>
+                    </div>
+                    <div class="input-footer">
+                        Cmd/Ctrl + Enter to send, Enter for new line · Paste/Ctrl+V to attach image
+                    </div>
                 </div>
             </div>
             
-            <div class="input-area">
-                <div class="input-status" id="inputStatus"></div>
-                <!-- Image attachments preview -->
-                <div class="image-attachments" id="imageAttachments"></div>
-                <div class="input-container">
-                    <textarea 
-                        class="message-input" 
-                        id="messageInput" 
-                        placeholder="Message... (Paste image to attach)"
-                        rows="1"
-                    ></textarea>
-                    <button class="send-btn" id="sendBtn" disabled>
-                        ↑
-                    </button>
+            <!-- Divider (hidden by default) -->
+            <div class="panel-divider" id="panelDivider" style="display: none;"></div>
+            
+            <!-- HTML Preview Panel (hidden by default) -->
+            <div class="panel" id="htmlPanel" style="display: none;">
+                <header class="panel-header">
+                    <span class="title">HTML Preview</span>
+                    <div class="panel-actions">
+                        <button class="panel-btn" id="clearHtmlBtn" title="清空">🗑️</button>
+                        <button class="panel-btn" id="refreshHtmlBtn" title="刷新">🔄</button>
+                        <button class="panel-btn" id="closeSplitBtn" title="关闭分屏" style="display: none;">✕</button>
+                    </div>
+                </header>
+                <div class="panel-content" id="htmlPreviewContent">
+                    <div class="html-preview-placeholder">
+                        <div class="icon">🌐</div>
+                        <h3>HTML Preview</h3>
+                        <p>在下方输入 HTML 代码或从对话中加载</p>
+                    </div>
                 </div>
-                <div class="input-footer">
-                    Cmd/Ctrl + Enter to send, Enter for new line · Paste/Ctrl+V to attach image
+                <div class="html-input-area">
+                    <div class="html-input-container">
+                        <textarea 
+                            class="html-input" 
+                            id="htmlInput" 
+                            placeholder="输入 HTML 代码..."
+                            rows="2"
+                        ></textarea>
+                        <button class="html-render-btn" id="renderHtmlBtn">渲染</button>
+                    </div>
                 </div>
             </div>
-        </main>
+        </div>
     </div>
     
     <!-- Confirm Dialog -->
