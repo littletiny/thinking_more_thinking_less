@@ -72,7 +72,8 @@ const elements = {
     // Split panel elements
     mainContainer: document.getElementById('mainContainer'),
     chatPanel: document.getElementById('chatPanel'),
-    htmlPanel: document.getElementById('htmlPanel'),
+    htmlPanel: document.getElementById('mockcraftPanel'),  // 现在指向MockCraft面板
+    mockcraftPanel: document.getElementById('mockcraftPanel'),
     panelDivider: document.getElementById('panelDivider'),
     htmlPreviewContent: document.getElementById('htmlPreviewContent'),
     htmlInput: document.getElementById('htmlInput'),
@@ -282,6 +283,11 @@ function selectSession(sessionId) {
     
     // Load conversation from file if exists
     loadConversation(session);
+    
+    // Load prototypes for this session
+    if (window.MockCraft) {
+        MockCraft.loadPrototypes(sessionId);
+    }
     
     // Close sidebar on mobile
     closeSidebar();
@@ -1893,26 +1899,26 @@ function toggleSplit(mode) {
     
     if (mode === 'vertical') {
         elements.mainContainer.classList.add('split-vertical');
-        elements.htmlPanel.style.display = 'flex';
+        elements.mockcraftPanel.style.display = 'flex';
         elements.panelDivider.style.display = 'block';
         
         // 设置默认大小
         elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
-        elements.htmlPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
+        elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
     } else if (mode === 'horizontal') {
         elements.mainContainer.classList.add('split-horizontal');
-        elements.htmlPanel.style.display = 'flex';
+        elements.mockcraftPanel.style.display = 'flex';
         elements.panelDivider.style.display = 'block';
         
         // 设置默认大小
         elements.chatPanel.style.flex = `0 0 ${panelSizes.panel1}%`;
-        elements.htmlPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
+        elements.mockcraftPanel.style.flex = `0 0 ${panelSizes.panel2}%`;
     } else {
         // 关闭分屏
-        elements.htmlPanel.style.display = 'none';
+        elements.mockcraftPanel.style.display = 'none';
         elements.panelDivider.style.display = 'none';
         elements.chatPanel.style.flex = '1';
-        elements.htmlPanel.style.flex = '1';
+        elements.mockcraftPanel.style.flex = '1';
     }
     
     showToast(mode ? `已${mode === 'vertical' ? '垂直' : '水平'}分屏` : '已关闭分屏');
@@ -1953,7 +1959,7 @@ function setupDividerDrag() {
         panelSizes = { panel1: newSize, panel2: 100 - newSize };
         
         elements.chatPanel.style.flex = `0 0 ${newSize}%`;
-        elements.htmlPanel.style.flex = `0 0 ${100 - newSize}%`;
+        elements.mockcraftPanel.style.flex = `0 0 ${100 - newSize}%`;
     });
     
     document.addEventListener('mouseup', () => {
@@ -2036,6 +2042,11 @@ async function init() {
     
     // Initialize split panel
     initSplitPanel();
+    
+    // Initialize MockCraft
+    if (window.MockCraft) {
+        MockCraft.init();
+    }
     
     // Setup paste handling
     elements.messageInput.addEventListener('paste', handlePaste);
