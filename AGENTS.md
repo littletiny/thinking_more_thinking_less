@@ -49,3 +49,18 @@ python server.py
 | **设计** | [`docs/design/mockcraft-constraints.md`](docs/design/mockcraft-constraints.md) | 技术约束 |
 
 ---
+
+## kimi-cli 子项目
+
+kimi-cli 源代码，Zettel 通过 ACP 协议连接的核心组件。
+
+### 参考文档
+
+| 文档 | 内容 |
+|------|------|
+| [`kimi-cli/README.md`](kimi-cli/README.md) | 项目说明、安装指南、基本用法 |
+| [`kimi-cli/AGENTS.md`](kimi-cli/AGENTS.md) | 开发规范、架构说明 |
+| [`kimi-cli/CHANGELOG.md`](kimi-cli/CHANGELOG.md) | 版本变更记录 |
+| [`kimi-cli/CONTRIBUTING.md`](kimi-cli/CONTRIBUTING.md) | 贡献指南 |
+
+---
