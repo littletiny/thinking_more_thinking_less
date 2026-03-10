@@ -40,7 +40,7 @@ window.showToast = showToast;
 import { renderSessionList, renderSessionGroup } from './sessions/renderer.js';
 
 // Chat
-import { sendMessage, streamChat, loadConversation, updateChatTitle } from './chat/index.js';
+import { sendMessage, stopGeneration, streamChat, loadConversation, updateChatTitle } from './chat/index.js';
 import { renderMessages, addMessage, renderUserContent, handleCopyMessage, parseThinkingFromContent, renderBlock, renderMessageContent } from './chat/renderer.js';
 import { updateStreamingBlocks, appendStreamingChunk, parseContentToBlocks, finalizeStreamingMessage } from './chat/streaming.js';
 import { handleEvent, updateToolsBlock, renderThinkingBlock, renderToolsBlock, getToolIcon, initToolsToggle, toggleToolsVisibility, updateToolsToggleButton, updateInputStatus } from './chat/tools.js';

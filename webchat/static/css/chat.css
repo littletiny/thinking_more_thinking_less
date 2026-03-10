@@ -194,6 +194,21 @@
     cursor: not-allowed;
 }
 
+/* Stop Button Style */
+.send-btn.stop-btn {
+    background: #ef4444;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.send-btn.stop-btn:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
 .input-footer {
     text-align: center;
     padding-top: 8px;

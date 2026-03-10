@@ -39,7 +39,20 @@ export function showToast(message) {
 export function updateSendButton() {
     const hasText = elements.messageInput.value.trim().length > 0;
     const hasImages = attachedImages.length > 0;
-    elements.sendBtn.disabled = (!hasText && !hasImages) || isStreaming;
+    
+    if (isStreaming) {
+        // Show stop button
+        elements.sendBtn.innerHTML = '◼';
+        elements.sendBtn.classList.add('stop-btn');
+        elements.sendBtn.disabled = false;
+        elements.sendBtn.title = 'Stop generation';
+    } else {
+        // Show send button
+        elements.sendBtn.innerHTML = '➤';
+        elements.sendBtn.classList.remove('stop-btn');
+        elements.sendBtn.disabled = (!hasText && !hasImages);
+        elements.sendBtn.title = 'Send message';
+    }
 }
 
 export function autoResizeTextarea() {

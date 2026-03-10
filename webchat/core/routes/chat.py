@@ -26,6 +26,30 @@ def init_session_manager(sm: SessionManager):
     session_manager = sm
 
 
+@bp.route("/sessions/<session_id>/stop", methods=["POST"])
+def stop_generation(session_id):
+    """
+    停止当前正在生成的响应
+    
+    Response:
+        {"success": true, "stopped": true}  - 成功触发停止
+        {"success": false, "error": "..."}  - 停止失败或没有正在生成的响应
+    """
+    logger.info(f"API: stop_generation {session_id}")
+    
+    session = session_manager.get_session(session_id)
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+    
+    # 调用 session 的停止方法
+    stopped = session.stop_generation()
+    
+    if stopped:
+        return jsonify({"success": True, "stopped": True, "message": "Stop signal sent"})
+    else:
+        return jsonify({"success": False, "error": "No generation in progress"}), 400
+
+
 @bp.route("/sessions/<session_id>/chat", methods=["POST"])
 def chat(session_id):
     """

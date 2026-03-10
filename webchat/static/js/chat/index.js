@@ -15,8 +15,42 @@ import { loadSessions } from '../sessions/manager.js';
 import { renderSessionList } from '../sessions/renderer.js';
 import { API_BASE } from '../config.js';
 
+// Abort controller for streaming
+let currentAbortController = null;
+
+export async function stopGeneration() {
+    if (!isStreaming || !currentSession) {
+        return;
+    }
+    
+    try {
+        // Abort the fetch request
+        if (currentAbortController) {
+            currentAbortController.abort();
+            currentAbortController = null;
+        }
+        
+        // Notify backend to stop
+        const response = await fetch(API_BASE + '/api/sessions/' + currentSession.id + '/stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showToast('Generation stopped');
+        }
+    } catch (err) {
+        console.error('Failed to stop generation:', err);
+    }
+}
+
 export async function sendMessage() {
-    if (isStreaming) return;
+    if (isStreaming) {
+        // If already streaming, stop it
+        await stopGeneration();
+        return;
+    }
     
     // 构建消息内容（支持多模态）
     const messageContent = buildMessageContent();
@@ -80,8 +114,10 @@ export async function sendMessage() {
     try {
         await streamChat(messageContent);
     } catch (err) {
-        appendStreamingChunk('Error: ' + err.message, 'output');
-        finalizeStreamingMessage();
+        if (err.name !== 'AbortError') {
+            appendStreamingChunk('Error: ' + err.message, 'output');
+            finalizeStreamingMessage();
+        }
     } finally {
         setIsStreaming(false);
         updateSendButton();
@@ -95,12 +131,17 @@ export async function sendMessage() {
 export async function streamChat(message) {
     const sessionId = currentSession.id;
     
+    // Create abort controller for this request
+    currentAbortController = new AbortController();
+    const signal = currentAbortController.signal;
+    
     return new Promise((resolve, reject) => {
         // Use fetch with ReadableStream for SSE
         fetch(API_BASE + '/api/sessions/' + sessionId + '/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message }),  // message 可以是字符串或数组
+            signal: signal,
         }).then(response => {
             if (!response.ok) {
                 reject(new Error('HTTP ' + response.status));
@@ -156,7 +197,18 @@ export async function streamChat(message) {
             }
             
             read();
-        }).catch(reject);
+        }).catch(err => {
+            // Handle abort error specially
+            if (err.name === 'AbortError') {
+                console.log('[streamChat] Request aborted');
+                finalizeStreamingMessage();
+                resolve();
+            } else {
+                reject(err);
+            }
+        }).finally(() => {
+            currentAbortController = null;
+        });
     });
 }
 

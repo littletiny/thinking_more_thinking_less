@@ -115,6 +115,8 @@ class WebSession(BaseSession):
         self._mock_history: List[dict] = []
         # 处理锁：确保同一个 session 的消息顺序处理
         self._processing_lock = threading.Lock()
+        # 停止生成标志
+        self._stop_event = threading.Event()
         logger.debug(f"[{meta.id}] WebSession created (acp_session_id: {meta.acp_session_id or 'new'})")
     
     def _is_acp_alive(self) -> bool:
@@ -295,6 +297,8 @@ class WebSession(BaseSession):
             # 流式输出 thinking（如果回调存在）
             if thinking_callback:
                 for char in mock_thinking:
+                    if self._stop_event.is_set():
+                        break
                     thinking_callback(char)
                     await asyncio.sleep(0.001)
             
@@ -305,8 +309,13 @@ class WebSession(BaseSession):
                 event_callback({"type": "tool_result", "data": {"id": "mock-1", "status": "completed", "result": "hello"}})
                 await asyncio.sleep(0.1)
             
+            stopped = False
+            
             # 流式输出
             for char in mock_output:
+                if self._stop_event.is_set():
+                    stopped = True
+                    break
                 chunk_callback(char)
                 await asyncio.sleep(0.001)
             
@@ -322,7 +331,8 @@ class WebSession(BaseSession):
                 "output": mock_output,
                 "has_thinking": True,
                 "history_count": len(self._mock_history),
-                "events": []
+                "events": [],
+                "stopped": stopped
             }
         
         # 清空客户端状态
@@ -370,10 +380,18 @@ class WebSession(BaseSession):
         
         loop_count = 0
         no_data_count = 0
+        stopped = False
+        
         try:
             logger.debug(f"[{self.id}] Entering response loop")
             while True:
                 loop_count += 1
+                
+                # 检查是否请求停止
+                if self._stop_event.is_set():
+                    logger.info(f"[{self.id}] Stop requested, breaking loop")
+                    stopped = True
+                    break
                 
                 task_done = response_task.done()
                 has_pending = self._client.has_pending()
@@ -454,8 +472,24 @@ class WebSession(BaseSession):
             "thinking": thinking_text,
             "output": output_text,
             "has_thinking": has_thinking,
-            "events": all_events
+            "events": all_events,
+            "stopped": stopped
         }
+    
+    def stop_generation(self) -> bool:
+        """
+        请求停止当前生成
+        
+        Returns:
+            是否成功触发停止
+        """
+        if not self._processing_lock.locked():
+            # 没有正在处理的消息
+            return False
+        
+        logger.info(f"[{self.id}] Stop generation requested")
+        self._stop_event.set()
+        return True
     
     def send_message_sync(
         self, 
@@ -472,8 +506,11 @@ class WebSession(BaseSession):
             message: 字符串或内容部件列表（支持多模态）
         
         Returns:
-            {"thinking": str|None, "output": str, "has_thinking": bool, "events": list}
+            {"thinking": str|None, "output": str, "has_thinking": bool, "events": list, "stopped": bool}
         """
+        # 清除停止标志
+        self._stop_event.clear()
+        
         # 获取处理锁，阻塞等待前一个消息完成
         with self._processing_lock:
             if isinstance(message, str):
