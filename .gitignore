@@ -6,6 +6,7 @@ webchat/prototypes/
 
 # Session metadata (auto-generated)
 webchat/sessions.json
+webchat/mockcraft_index.json
 
 # Runtime logs
 webchat/server.log
