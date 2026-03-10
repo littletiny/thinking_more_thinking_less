@@ -31,3 +31,21 @@ python server.py
 | [`webchat/HISTORY.md`](webchat/HISTORY.md) | 开发历史、变更记录 |
 
 ---
+
+## MockCraft 子项目
+
+基于自然语言的需求验证与原型生成系统。
+
+### 参考文档
+
+| 类型 | 文档 | 内容 |
+|------|------|------|
+| **入口** | [`docs/00-meta/project-index.md`](docs/00-meta/project-index.md) | 项目总索引、快速导航 |
+| **过程** | [`docs/00-meta/task-status-board.md`](docs/00-meta/task-status-board.md) | 开发进度、任务状态 |
+| **过程** | [`docs/00-meta/decision-log.md`](docs/00-meta/decision-log.md) | ADR 决策记录 |
+| **需求** | [`docs/requirements/mockcraft-requirements.md`](docs/requirements/mockcraft-requirements.md) | 功能需求规格 |
+| **探索** | [`docs/exploration/mockcraft-exploration.md`](docs/exploration/mockcraft-exploration.md) | 需求探索过程 |
+| **设计** | [`docs/design/mockcraft-design.md`](docs/design/mockcraft-design.md) | 系统架构设计 |
+| **设计** | [`docs/design/mockcraft-constraints.md`](docs/design/mockcraft-constraints.md) | 技术约束 |
+
+---
