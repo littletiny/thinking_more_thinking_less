@@ -24,6 +24,7 @@ const MockCraftState = {
 let prototypeMenuVisible = false;  // 菜单显示状态
 let renamingPrototypeId = null;    // 正在重命名的原型ID
 let draggedPageIndex = null;       // 拖拽中的页面索引
+let playbackEventsBound = false;   // 播放控件事件是否已绑定
 
 // ============== Utils ==============
 
@@ -1705,30 +1706,46 @@ function getPageTypeIcon(type) {
 }
 
 /**
+ * 初始化播放控件事件（只执行一次）
+ */
+function initPlaybackControls() {
+    if (playbackEventsBound) return;
+    
+    console.log('[initPlaybackControls] Initializing playback control events...');
+    
+    const headerPlayPauseBtn = document.getElementById('headerPlayPauseBtn');
+    const headerPrevBtn = document.getElementById('headerPrevBtn');
+    const headerNextBtn = document.getElementById('headerNextBtn');
+    
+    headerPlayPauseBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('[initPlaybackControls] playPauseBtn clicked');
+        togglePlayback();
+    });
+    
+    headerPrevBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('[initPlaybackControls] prevBtn clicked');
+        navigatePage(-1);
+    });
+    
+    headerNextBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('[initPlaybackControls] nextBtn clicked');
+        navigatePage(1);
+    });
+    
+    playbackEventsBound = true;
+}
+
+/**
  * 绑定页面编排事件
  */
 function bindPageOrchestrationEvents() {
     console.log('[bindPageOrchestrationEvents] Binding events...');
     
-    // Header 播放控制按钮
-    const headerPlayPauseBtn = document.getElementById('headerPlayPauseBtn');
-    const headerPrevBtn = document.getElementById('headerPrevBtn');
-    const headerNextBtn = document.getElementById('headerNextBtn');
-    
-    headerPlayPauseBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] header playPauseBtn clicked');
-        togglePlayback();
-    });
-    headerPrevBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] header prevBtn clicked');
-        navigatePage(-1);
-    });
-    headerNextBtn?.addEventListener('click', () => {
-        console.log('[bindPageOrchestrationEvents] header nextBtn clicked');
-        navigatePage(1);
-    });
-    
-    // 注：播放间隔设置在 renderPageOrchestration 中处理，这里不需要重复设置
+    // 初始化播放控件事件（只执行一次）
+    initPlaybackControls();
     
     // 页面列表拖拽
     const pageList = document.getElementById('pageList');
@@ -1889,12 +1906,21 @@ function goToPage(index, skipRender = false) {
     const page = MockCraftState.pages[index];
     if (!page) return;
     
-    console.log('[goToPage] navigating to page:', index, 'proto:', page.name, 'skipRender:', skipRender);
+    console.log('[goToPage] navigating to page:', index, 'page.id:', page.id, 'protoId:', page.protoId, 'skipRender:', skipRender);
     
+    // 检查是否需要切换原型
+    // 使用 instanceId 来判断是否是同一页面实例，避免同一原型的不同实例被误认为同一页面
+    const prevPageIndex = MockCraftState.currentPageIndex;
+    const prevPage = MockCraftState.pages[prevPageIndex];
+    const isSamePrototype = MockCraftState.currentPrototype?.id === page.protoId;
+    
+    console.log('[goToPage] prevPageIndex:', prevPageIndex, 'prevPageId:', prevPage?.id, 'targetPageId:', page.id, 'isSamePrototype:', isSamePrototype);
+    
+    // 更新当前页面索引
     MockCraftState.currentPageIndex = index;
     
-    // 如果切换到不同的原型，加载该原型（使用 protoId）
-    if (MockCraftState.currentPrototype?.id !== page.protoId) {
+    // 如果是不同的原型，需要加载该原型
+    if (!isSamePrototype) {
         selectPrototype(page.protoId);
     } else if (!skipRender) {
         // 同一个原型，只更新显示
@@ -2023,7 +2049,16 @@ function initPagesForPrototype(prototype) {
     // 完全手动管理编排，不自动初始化
     // 保持播放状态，不要在这里停止
     
-    // 如果选中的原型在编排中，更新当前索引（使用 protoId 比较）
+    // 如果选中的原型在编排中，更新当前索引（使用 instanceId 比较，支持同一原型的多个实例）
+    // 首先尝试匹配当前正在播放的页面实例
+    const currentPage = MockCraftState.pages[MockCraftState.currentPageIndex];
+    if (currentPage && currentPage.protoId === prototype?.id) {
+        // 当前页面已经是该原型，保持不变
+        console.log('[initPagesForPrototype] current page already matches prototype');
+        return;
+    }
+    
+    // 查找该原型在编排中的第一个实例
     const pageIndex = MockCraftState.pages.findIndex(p => p.protoId === prototype?.id);
     if (pageIndex !== -1) {
         MockCraftState.currentPageIndex = pageIndex;
