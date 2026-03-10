@@ -23,30 +23,64 @@ WebChat 是 Zettel 知识库的 Web 聊天界面，通过 ACP 协议连接 kimi-
 
 ```
 webchat/
-├── server.py              # Flask 后端 (核心)
-├── sessions.json          # Session 元数据
-├── format_utils.py        # 格式化工具
-├── task_scheduler.py      # 任务调度器
+├── server.py              # 入口文件 (24行)
+├── core/                  # 后端 Flask 核心模块
+│   ├── config.py          # 全局配置、常量
+│   ├── models.py          # 数据模型 (SessionMeta, ToolCallInfo等)
+│   ├── async_runner.py    # SessionAsyncRunner - 异步执行器
+│   ├── sessions.py        # Session 抽象和实现 (BaseSession, WebSession)
+│   ├── acp_client.py      # SimpleACPClient - ACP 协议客户端
+│   ├── session_manager.py # SessionManager - 会话管理器
+│   ├── message_parser.py  # 消息解析器
+│   └── routes/            # API 路由蓝图
+│       ├── sessions.py    # 会话 CRUD
+│       ├── chat.py        # /chat SSE 端点
+│       ├── messages.py    # /messages 历史记录
+│       └── ...
 ├── static/
 │   ├── index.html         # 前端页面
-│   └── app.js             # 前端逻辑
+│   ├── js/                # 前端 ES Modules
+│   │   ├── app.js         # 入口模块
+│   │   ├── state.js       # 全局状态
+│   │   ├── api.js         # API 封装
+│   │   ├── chat/          # 聊天相关模块
+│   │   ├── sessions/      # 会话管理
+│   │   └── ui/            # UI 组件
+│   └── css/               # 样式模块
 ├── mock_data/             # Mock 模式数据
 │   ├── conversations/     # 模拟对话记录
 │   └── sessions.json
 ├── README.md              # 项目说明
-├── AGENTS.md              # 本文件
-├── HISTORY.md             # 开发历史
-└── FORMATTING.md          # 格式化规范
+├── DEVELOPER_GUIDE.md     # 开发导航（详细）
+└── AGENTS.md              # 本文件
 ```
 
 ### 核心文件导航
 
+#### 后端核心模块
+
 | 文件 | 职责 | 关键类/函数 |
 |------|------|------------|
-| `server.py` | Flask 后端、ACP 通信 | `WebSession`, `SessionAsyncRunner`, `SimpleACPClient` |
-| `static/app.js` | 前端逻辑 | SSE 流式接收、消息渲染 |
-| `format_utils.py` | 响应格式化 | `parse_and_format_response()` |
-| `task_scheduler.py` | 后台任务调度 | `TaskScheduler` |
+| `core/sessions.py` | Session 实现 | `WebSession.send_message_sync()`, `_send_message_async()` |
+| `core/acp_client.py` | ACP 协议客户端 | `SimpleACPClient.session_update()` |
+| `core/session_manager.py` | 会话生命周期管理 | `SessionManager` |
+| `core/async_runner.py` | 异步执行器 | `SessionAsyncRunner.run_sync()` |
+| `core/routes/chat.py` | SSE 端点 | `chat()` |
+| `server.py` | 入口文件 | Flask 应用启动 |
+
+#### 前端核心模块
+
+| 文件 | 职责 | 关键类/函数 |
+|------|------|------------|
+| `js/chat/index.js` | 发送消息入口 | `sendMessage()`, `streamChat()` |
+| `js/chat/streaming.js` | 流式消息处理 | `updateStreamingBlocks()`, `appendStreamingChunk()` |
+| `js/chat/tools.js` | 工具调用显示 | `handleEvent()` |
+| `js/sessions/manager.js` | 会话切换 | `selectSession()` |
+| `js/state.js` | 全局状态 | `setXxx()` |
+
+> 📖 详细开发指南请参考：`webchat/DEVELOPER_GUIDE.md`
+>
+> 包含：流式消息状态机、工具调用状态机、Session 生命周期、模块依赖关系、调试指南等
 
 ### 启动方式
 
