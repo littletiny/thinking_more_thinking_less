@@ -9,6 +9,16 @@
 
 ---
 
+## ACP 协议
+
+Agent Client Protocol - 编辑器与 AI Agent 通信标准。
+
+| 文档 | 内容 |
+|------|------|
+| [`docs/ACP.md`](docs/ACP.md) | ACP 协议详解（标准协议、kimi-cli 实现差异、本项目使用） |
+
+---
+
 ## WebChat 项目
 
 WebChat 是 Zettel 知识库的 Web 聊天界面，通过 ACP 协议连接 kimi-cli。
