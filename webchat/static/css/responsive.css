@@ -1,0 +1,71 @@
+/* Responsive styles - Mobile adaptations */
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .sidebar.collapsed {
+        width: var(--sidebar-width);
+        margin-left: 0;
+    }
+    
+    .chat-header .sidebar-toggle-btn {
+        display: none;
+    }
+    
+    .chat-header .mobile-menu-btn {
+        display: block;
+    }
+    
+    /* Mobile: disable split panel, always show only chat */
+    .main-container.split-vertical,
+    .main-container.split-horizontal {
+        flex-direction: column;
+    }
+    
+    .main-container.split-vertical .panel-divider,
+    .main-container.split-horizontal .panel-divider {
+        display: none !important;
+    }
+    
+    .main-container.split-vertical #htmlPanel,
+    .main-container.split-horizontal #htmlPanel {
+        display: none !important;
+    }
+    
+    .main-container.split-vertical #chatPanel,
+    .main-container.split-horizontal #chatPanel {
+        flex: 1 !important;
+    }
+    
+    .panel-btn[title*="分屏"],
+    .panel-btn[title="关闭分屏"] {
+        display: none !important;
+    }
+    
+    .message {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .message .avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+    
+    .input-area {
+        padding: 12px;
+    }
+}

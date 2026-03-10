@@ -1,0 +1,355 @@
+/* Components styles - Buttons, dialogs, overlays, and common UI elements */
+
+/* Panel styles */
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.panel-divider {
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.main-container.split-vertical .panel-divider {
+    width: 4px;
+    cursor: col-resize;
+}
+
+.main-container.split-horizontal .panel-divider {
+    height: 4px;
+    cursor: row-resize;
+}
+
+.panel-divider:hover {
+    background: var(--primary);
+}
+
+.panel-header {
+    height: var(--header-height);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--bg-primary);
+    flex-shrink: 0;
+}
+
+.panel-header .title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.panel-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.panel-btn {
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.panel-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.panel-content {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+/* Header Actions */
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.export-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+/* Toggle Tools Button */
+.toggle-tools-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.toggle-tools-btn:hover {
+    opacity: 1;
+    background: var(--bg-secondary);
+}
+
+.toggle-tools-btn.hidden {
+    opacity: 0.3;
+}
+
+/* Mobile Sidebar Overlay */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+}
+
+.sidebar-overlay.open {
+    display: block;
+}
+
+/* Confirm Dialog - Centered */
+.confirm-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.confirm-overlay.open {
+    display: flex;
+}
+
+.confirm-dialog {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 360px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: confirmSlideIn 0.2s ease;
+}
+
+@keyframes confirmSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.confirm-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.confirm-message {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.confirm-btns {
+    display: flex;
+    gap: 12px;
+}
+
+.confirm-btns button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.confirm-btns button:hover {
+    opacity: 0.9;
+}
+
+.confirm-btns .cancel {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.confirm-btns .danger {
+    background: var(--danger);
+    color: white;
+}
+
+.confirm-btns .primary {
+    background: var(--primary);
+    color: white;
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* Theme Dialog */
+.theme-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1001;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-overlay.open {
+    display: flex;
+}
+
+.theme-dialog {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 320px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: confirmSlideIn 0.2s ease;
+}
+
+.theme-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.theme-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.theme-option:hover {
+    background: var(--bg-secondary);
+}
+
+.theme-option.active {
+    background: rgba(16, 163, 127, 0.1);
+}
+
+.theme-preview {
+    width: 40px;
+    height: 30px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 11px;
+}
+
+.theme-name {
+    flex: 1;
+    font-size: 14px;
+}
+
+.theme-check {
+    color: var(--primary);
+    font-weight: bold;
+    opacity: 0;
+}
+
+.theme-option.active .theme-check {
+    opacity: 1;
+}
+
+.theme-btns {
+    display: flex;
+    gap: 12px;
+}
+
+.theme-btns button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.theme-btns button:hover {
+    opacity: 0.9;
+}
+
+.theme-btns .cancel {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
