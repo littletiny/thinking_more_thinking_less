@@ -148,32 +148,24 @@ python tools/update_index.py update-stats
 
 ---
 
-## Recording Requirements (CRITICAL)
+## Recording Requirements
 
-### 1. Always Record Full Conversations
+### 1. WebChat 自动记录
 
-**When**: Any meaningful discussion that produces insights
+**WebChat 已自动保存完整对话到 `conversations/` 目录。**
 
-**What to record**:
-- **Complete user input** (copy-paste, don't summarize)
-- **Complete AI output** (copy-paste the full response)
-- **Context**: What triggered this discussion
+无需手动复制粘贴，系统会自动：
+- 保存完整的 user input
+- 保存完整的 AI output (包括 thinking 和 tool_calls)
+- 按日期命名文件: `2026-MM-DD-{topic}.md`
 
-**Never**:
-- ❌ Summarize or paraphrase user input
-- ❌ Extract only "key points" from AI output
-- ❌ Skip the "obvious" parts
+### 2. 需要手动完成的工作
 
-**Why**: 
-- Context is in the details
-- Future you may need the full reasoning
-- Summarization loses nuance
+- **判断哪些对话值得索引** (见 "When to Record")
+- **提取新概念** 到 `concepts/` 目录
+- **更新 `index.json`** 使用 `update_index.py` 工具
 
-### 2. Year is 2026
-
-All conversation files: `2026-MM-DD-{topic}.md`
-
-### 3. Conversation File Format
+### 3. Conversation File 格式参考
 
 ```markdown
 # Conversation: {Brief Topic}
@@ -250,9 +242,9 @@ Preserve the reasoning, examples, struggles.
 - Led to creation of [[other-concept]]
 ```
 
-### 4. After Recording Conversation (SIMPLIFIED)
+### 4. After Recording Conversation
 
-**CRITICAL: Update `index.json` ONLY** (single write, replaces multiple updates)
+**只需更新 `index.json`** (对话文件已由 WebChat 自动生成)
 
 ```json
 // Add to conversations array:
@@ -325,50 +317,20 @@ Technical explanation.
 
 ---
 
-## Recording Workflow (Minimal Tool Calls)
+## Recording Workflow
 
 When you decide to record (see "When to Record" above):
 
-### Step 1: Create Conversation File
+### Step 1: 确认 WebChat 已生成对话文件
+
+WebChat 自动在 `conversations/` 生成文件，格式如：
 ```
 conversations/2026-MM-DD-{brief-topic}.md
 ```
 
-Content template:
-```markdown
-# Conversation: {Topic}
+### Step 2: 提取新概念 (如有)
 
-## Metadata
-- **Date**: 2026-MM-DD
-- **Topic**: One-line description
-- **Concepts Produced**: [[concept-1]], [[concept-2]]
-
----
-
-## Conversation Record
-
-### User Input
-```
-[Paste complete user message]
-```
-
-### AI Output
-```
-[Paste complete AI response]
-```
-
----
-
-## Key Quotes
-
-> "Original user quote"
-
-> "Key AI insight"
-```
-
-### Step 2: Create Concept Cards (If new concepts emerged)
-
-Create `concepts/{name}.md` only for **reusable, non-obvious insights**:
+如对话中产生了**可复用、非显而易见**的洞察，创建 `concepts/{name}.md`：
 
 ```markdown
 # Concept Name
@@ -391,23 +353,23 @@ Technical explanation.
 - [[other-concept]]
 ```
 
-### Step 3: Update Index
+### Step 3: 更新 Index
 
-**⚠️ Use the tool - never edit index.json directly:**
+**⚠️ 使用工具 - 永远不要直接编辑 index.json：**
 
 ```bash
-# Add conversation
+# 添加对话记录
 python tools/update_index.py add-conversation \
     "2026-MM-DD-topic.md" "Topic" "2026-MM-DD" "concept-1"
 
-# Add concept (if new)
+# 如有新概念，添加概念
 python tools/update_index.py add-concept "concept-name" "解决方法论"
 
-# Validate
+# 验证完整性
 python tools/update_index.py validate
 ```
 
-**Goal**: Complete recording in 2-3 tool calls maximum.
+**目标**: 2-3 次 tool call 完成记录。
 
 ---
 
@@ -415,8 +377,6 @@ python tools/update_index.py validate
 
 | Rule | Why |
 |------|-----|
-| **Never summarize user input** | Context is in the details |
-| **Never excerpt AI output** | Reasoning process matters |
 | **Always link concept to conversation** | Traceability |
 | **Always preserve original quotes** | Authentic voice |
 | **Year is always 2026** | Consistency |
@@ -425,63 +385,9 @@ python tools/update_index.py validate
 
 ---
 
-## Example: Good vs Bad Recording
-
-### Bad (Summarized)
-
-```markdown
-### User Input
-User talked about a "find the difference" puzzle they couldn't solve.
-
-### AI Output
-I explained Observer Check concept.
-
-### Key Points
-- Check observer bias
-- Not eyes problem, seeing problem
-```
-
-**What's wrong**: Lost all context, reasoning, original words.
-
-### Good (Complete)
-
-```markdown
-### User Input
-
-```
-有这么一个case，有一天有一个"显而易见"的找茬图，我找不到哪里不合理...
-[complete text]
-```
-
-### AI Output
-
-```
-这是一个关于**元认知**的深刻案例。用户经历了：
-
-1. **困境**: 看不见"显而易见"的东西
-2. **转向**: 不是继续找，而是意识到自己"看的方式"有问题
-3. **方法**: "debug myself then debug case"
-
-**概念命名**: Observer Check...
-[complete response]
-```
-
-### Key Quotes
-
-> "我知道一定是我自己哪里的认知有问题了"
-
-> "debug myself then debug case"
-```
-
-**What's right**: Complete record, original words, full reasoning preserved.
-
----
-
 ## Current Status Tracking
 
 When updating, check:
-- [ ] Conversation has complete user input (not summarized)
-- [ ] Conversation has complete AI output (not excerpted)
 - [ ] Concept cards link to source conversations
 - [ ] All dates are 2026
 - [ ] **Used `update_index.py` tool to update index.json (NEVER edit directly)**
