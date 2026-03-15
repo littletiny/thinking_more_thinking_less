@@ -5,7 +5,7 @@ description: Maintain the Zettel knowledge base structure, conversations, and co
 
 # WebChat Agent Guidelines
 
-> WebChat **不自动记录对话全文**，Agent 通过检索 index 元信息找到相关历史，提炼知识到 Zettel。
+> WebChat **自动记录对话全文**，Agent 通过检索 index 元信息找到相关历史，提炼知识到 Zettel。
 
 ⚠️ **重要**：本项目属于 `zettel` 知识库系统。请先阅读上层目录的 `../SKILL.md` 了解完整的 Zettel 方法论和维护规范。
 
